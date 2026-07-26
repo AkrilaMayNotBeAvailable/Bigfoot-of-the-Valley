@@ -59,8 +59,8 @@ int main(int argc, char* argv[]){
     // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
     // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
-    float g_ScreenRatio = 1.0f;
-    InitialOpenGLFrameWorkConfiguration(window, g_ScreenRatio);
+    float screenRatio = 1.0f;
+    InitialOpenGLFrameWorkConfiguration(window, screenRatio);
 
     // Definimos a função de callback que será chamada sempre que o usuário
     // pressionar alguma tecla do teclado ...
@@ -486,7 +486,7 @@ int main(int argc, char* argv[]){
         if (g_MapView.IsActive())
         {
             view       = g_MapView.GetViewMatrix();
-            projection = g_MapView.GetProjectionMatrix(g_ScreenRatio);
+            projection = g_MapView.GetProjectionMatrix(screenRatio);
         }
         else
 #endif
@@ -554,7 +554,7 @@ int main(int argc, char* argv[]){
                 // Projeção Perspectiva.
                 // Para definição do field of view (FOV), veja slides 205-215 do documento Aula_09_Projecoes.pdf.
                 float field_of_view = 3.141592 / 3.0f;
-                projection = Matrix_Perspective(field_of_view, g_ScreenRatio, nearplane, farplane);
+                projection = Matrix_Perspective(field_of_view, screenRatio, nearplane, farplane);
             }
             else
             {
@@ -565,7 +565,7 @@ int main(int argc, char* argv[]){
                 // utilizando a variável g_CameraDistance.
                 float t = 1.5f*g_CameraDistance/2.5f;
                 float b = -t;
-                float r = t*g_ScreenRatio;
+                float r = t*screenRatio;
                 float l = -r;
                 projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane);
             }
