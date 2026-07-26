@@ -25,7 +25,10 @@ set(SOURCES
   src/player_model.cpp
 )
 
-cmake_minimum_required(VERSION 3.5.0)
+cmake_minimum_required(VERSION 3.10)
+
+set(CMAKE_CXX_COMPILER "C:/raylib/w64devkit/bin/g++.exe")
+set(CMAKE_C_COMPILER "C:/raylib/w64devkit/bin/gcc.exe")
 
 project(LAB_FCG VERSION 1.0.0)
 
@@ -100,7 +103,8 @@ if(WIN32)
       elseif (COMPILER_VERSION_OUTPUT MATCHES "mingw64")
         set(LIBGLFW ${PROJECT_SOURCE_DIR}/lib-mingw-64/libglfw3.a)
       else()
-        set(LIBGLFW ${PROJECT_SOURCE_DIR}/lib-mingw-32/libglfw3.a)
+        # set(LIBGLFW ${PROJECT_SOURCE_DIR}/lib-mingw-32/libglfw3.a) # Commented to fix compiler settings for windows
+        set(LIBGLFW ${PROJECT_SOURCE_DIR}/lib-mingw-64/libglfw3.a)
       endif()
     else()
       message(FATAL_ERROR "Failed to get MinGW compiler version.")

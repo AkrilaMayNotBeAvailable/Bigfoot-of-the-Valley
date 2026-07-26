@@ -4937,9 +4937,10 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
     }
 
     // Se o usuário apertar a tecla O, utilizamos projeção ortográfica.
-    if (key == GLFW_KEY_O && action == GLFW_PRESS)
-    {
+    if(key == GLFW_KEY_O && action == GLFW_PRESS && g_UsePerspectiveProjection == true){
         g_UsePerspectiveProjection = false;
+    } else if (key == GLFW_KEY_O && action == GLFW_PRESS && g_UsePerspectiveProjection == false){
+        g_UsePerspectiveProjection = true;
     }
 
     // Se o usuário apertar a tecla H, fazemos um "toggle" do texto informativo mostrado na tela.
