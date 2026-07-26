@@ -64,7 +64,7 @@
 #include "camera.h"
 #include "player.h"
 #include "map_view.h"
-
+#include "data_preparation.h"
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .
@@ -124,6 +124,26 @@ struct ObjModel
     }
 };
 
+// Definimos uma estrutura que armazenará dados necessários para renderizar
+// cada objeto da cena virtual.
+struct SceneObject
+{
+    std::string  name;        // Nome do objeto
+    size_t       first_index; // Índice do primeiro vértice dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
+    size_t       num_indices; // Número de índices do objeto dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
+    GLenum       rendering_mode; // Modo de rasterização (GL_TRIANGLES, GL_TRIANGLE_STRIP, etc.)
+    GLuint       vertex_array_object_id; // ID do VAO onde estão armazenados os atributos do modelo
+    glm::vec3    bbox_min; // Axis-Aligned Bounding Box do objeto
+    glm::vec3    bbox_max;
+    glm::vec3    diffuse = glm::vec3(0.8f); // Cor difusa (Kd) do material .mtl, se houver
+};
+
+// Abaixo definimos variáveis globais utilizadas em várias funções do código.
+
+
+
+void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
+
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -131,7 +151,6 @@ void PopMatrix(glm::mat4& M);
 
 // Declaração de várias funções utilizadas em main().  Essas estão definidas
 // logo após a definição de main() neste arquivo.
-void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
 void ComputeNormals(ObjModel* model); // Computa normais de um ObjModel, caso não existam.
 void LoadShadersFromFiles(); // Carrega os shaders de vértice e fragmento, criando um programa de GPU
 void LoadTextureImage(const char* filename); // Função que carrega imagens de textura
@@ -185,7 +204,6 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window);
 
 // Funções callback para comunicação com o sistema operacional e interação do
 // usuário. Veja mais comentários nas definições das mesmas, abaixo.
-void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
 void ErrorCallback(int error, const char* description);
 void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mode);
 void MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
@@ -217,22 +235,6 @@ bool ShouldSpectatorShoot();
 static glm::vec3 Normalize3(glm::vec3 v);
 
 
-// Definimos uma estrutura que armazenará dados necessários para renderizar
-// cada objeto da cena virtual.
-struct SceneObject
-{
-    std::string  name;        // Nome do objeto
-    size_t       first_index; // Índice do primeiro vértice dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
-    size_t       num_indices; // Número de índices do objeto dentro do vetor indices[] definido em BuildTrianglesAndAddToVirtualScene()
-    GLenum       rendering_mode; // Modo de rasterização (GL_TRIANGLES, GL_TRIANGLE_STRIP, etc.)
-    GLuint       vertex_array_object_id; // ID do VAO onde estão armazenados os atributos do modelo
-    glm::vec3    bbox_min; // Axis-Aligned Bounding Box do objeto
-    glm::vec3    bbox_max;
-    glm::vec3    diffuse = glm::vec3(0.8f); // Cor difusa (Kd) do material .mtl, se houver
-};
-
-// Abaixo definimos variáveis globais utilizadas em várias funções do código.
-
 // A cena virtual é uma lista de objetos nomeados, guardados em um dicionário
 // (map).  Veja dentro da função BuildTrianglesAndAddToVirtualScene() como que são incluídos
 // objetos dentro da variável g_VirtualScene, e veja na função main() como
@@ -242,10 +244,7 @@ std::map<std::string, SceneObject> g_VirtualScene;
 // Pilha que guardará as matrizes de modelagem.
 std::stack<glm::mat4>  g_MatrixStack;
 
-// Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
-float g_ScreenRatio = 1.0f;
-const int WINDOW_WIDTH = 1280;
-const int WINDOW_HEIGHT = 720;
+
 
 // Ângulos de Euler que controlam a rotação de um dos cubos da cena virtual
 float g_AngleX = 0.0f;
@@ -3139,209 +3138,6 @@ void ComputeNormals(ObjModel* model)
     }
 }
 
-// Constrói triângulos para futura renderização a partir de um ObjModel.
-void BuildTrianglesAndAddToVirtualScene(ObjModel* model)
-{
-    GLuint vertex_array_object_id;
-    glGenVertexArrays(1, &vertex_array_object_id);
-    glBindVertexArray(vertex_array_object_id);
-
-    std::vector<GLuint> indices;
-    std::vector<float>  model_coefficients;
-    std::vector<float>  normal_coefficients;
-    std::vector<float>  texture_coefficients;
-
-    const float minval = std::numeric_limits<float>::min();
-    const float maxval = std::numeric_limits<float>::max();
-
-    // Cor difusa (Kd) de um material do .mtl; cinza neutro quando não há material.
-    auto material_diffuse = [&](int m) -> glm::vec3
-    {
-        if (m >= 0 && m < (int)model->materials.size())
-            return glm::vec3(model->materials[m].diffuse[0],
-                             model->materials[m].diffuse[1],
-                             model->materials[m].diffuse[2]);
-        return glm::vec3(0.8f, 0.8f, 0.8f);
-    };
-    auto material_name = [&](int m) -> std::string
-    {
-        if (m >= 0 && m < (int)model->materials.size())
-            return model->materials[m].name;
-        return std::string("default");
-    };
-
-    for (size_t shape = 0; shape < model->shapes.size(); ++shape)
-    {
-        const tinyobj::mesh_t& mesh = model->shapes[shape].mesh;
-        size_t num_triangles = mesh.num_face_vertices.size();
-        bool has_materials = mesh.material_ids.size() == num_triangles;
-
-        auto tri_material = [&](size_t t) -> int
-        {
-            return has_materials ? mesh.material_ids[t] : -1;
-        };
-
-        // Ordem de aparição dos materiais usados por este shape.
-        std::vector<int> material_order;
-        for (size_t t = 0; t < num_triangles; ++t)
-        {
-            int m = tri_material(t);
-            if (std::find(material_order.begin(), material_order.end(), m) == material_order.end())
-                material_order.push_back(m);
-        }
-        if (material_order.empty())
-            material_order.push_back(-1);
-
-        // Emite os 3 vértices de um triângulo, atualizando buffers e bbox.
-        auto emit_triangle = [&](size_t triangle, glm::vec3& bmin, glm::vec3& bmax)
-        {
-            assert(mesh.num_face_vertices[triangle] == 3);
-            for (size_t vertex = 0; vertex < 3; ++vertex)
-            {
-                tinyobj::index_t idx = mesh.indices[3*triangle + vertex];
-
-                indices.push_back((GLuint)(model_coefficients.size() / 4));
-
-                const float vx = model->attrib.vertices[3*idx.vertex_index + 0];
-                const float vy = model->attrib.vertices[3*idx.vertex_index + 1];
-                const float vz = model->attrib.vertices[3*idx.vertex_index + 2];
-                model_coefficients.push_back( vx ); // X
-                model_coefficients.push_back( vy ); // Y
-                model_coefficients.push_back( vz ); // Z
-                model_coefficients.push_back( 1.0f ); // W
-
-                bmin.x = std::min(bmin.x, vx); bmax.x = std::max(bmax.x, vx);
-                bmin.y = std::min(bmin.y, vy); bmax.y = std::max(bmax.y, vy);
-                bmin.z = std::min(bmin.z, vz); bmax.z = std::max(bmax.z, vz);
-
-                // A tinyobjloader retorna índice -1 quando não há normal/textura.
-                if ( idx.normal_index != -1 )
-                {
-                    normal_coefficients.push_back( model->attrib.normals[3*idx.normal_index + 0] );
-                    normal_coefficients.push_back( model->attrib.normals[3*idx.normal_index + 1] );
-                    normal_coefficients.push_back( model->attrib.normals[3*idx.normal_index + 2] );
-                    normal_coefficients.push_back( 0.0f );
-                }
-
-                if ( idx.texcoord_index != -1 )
-                {
-                    texture_coefficients.push_back( model->attrib.texcoords[2*idx.texcoord_index + 0] );
-                    texture_coefficients.push_back( model->attrib.texcoords[2*idx.texcoord_index + 1] );
-                }
-            }
-        };
-
-        size_t shape_first_index = indices.size();
-        glm::vec3 shape_bbox_min = glm::vec3(maxval,maxval,maxval);
-        glm::vec3 shape_bbox_max = glm::vec3(minval,minval,minval);
-
-        // Para cada material usado, emitimos suas faces num intervalo contíguo e
-        // (quando há mais de um material) registramos um sub-objeto próprio, com a
-        // cor do .mtl. Assim um único shape multi-material (ex.: o carro) pode ser
-        // desenhado peça a peça com cores diferentes.
-        for (int m : material_order)
-        {
-            size_t group_first_index = indices.size();
-            glm::vec3 group_bbox_min = glm::vec3(maxval,maxval,maxval);
-            glm::vec3 group_bbox_max = glm::vec3(minval,minval,minval);
-
-            for (size_t t = 0; t < num_triangles; ++t)
-            {
-                if (tri_material(t) != m)
-                    continue;
-                emit_triangle(t, group_bbox_min, group_bbox_max);
-            }
-
-            shape_bbox_min.x = std::min(shape_bbox_min.x, group_bbox_min.x);
-            shape_bbox_min.y = std::min(shape_bbox_min.y, group_bbox_min.y);
-            shape_bbox_min.z = std::min(shape_bbox_min.z, group_bbox_min.z);
-            shape_bbox_max.x = std::max(shape_bbox_max.x, group_bbox_max.x);
-            shape_bbox_max.y = std::max(shape_bbox_max.y, group_bbox_max.y);
-            shape_bbox_max.z = std::max(shape_bbox_max.z, group_bbox_max.z);
-
-            if (material_order.size() > 1)
-            {
-                SceneObject part;
-                part.name           = model->shapes[shape].name + "_" + material_name(m);
-                part.first_index    = group_first_index;
-                part.num_indices    = indices.size() - group_first_index;
-                part.rendering_mode = GL_TRIANGLES;
-                part.vertex_array_object_id = vertex_array_object_id;
-                part.bbox_min       = group_bbox_min;
-                part.bbox_max       = group_bbox_max;
-                part.diffuse        = material_diffuse(m);
-                g_VirtualScene[part.name] = part;
-            }
-        }
-
-        // Objeto cobrindo o shape inteiro (compatível com os modelos existentes,
-        // que têm 1 material só e continuam sendo desenhados pelo nome do shape).
-        SceneObject theobject;
-        theobject.name           = model->shapes[shape].name;
-        theobject.first_index    = shape_first_index;
-        theobject.num_indices    = indices.size() - shape_first_index;
-        theobject.rendering_mode = GL_TRIANGLES;
-        theobject.vertex_array_object_id = vertex_array_object_id;
-        theobject.bbox_min       = shape_bbox_min;
-        theobject.bbox_max       = shape_bbox_max;
-        theobject.diffuse        = material_diffuse(material_order[0]);
-        g_VirtualScene[model->shapes[shape].name] = theobject;
-    }
-
-    GLuint VBO_model_coefficients_id;
-    glGenBuffers(1, &VBO_model_coefficients_id);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO_model_coefficients_id);
-    glBufferData(GL_ARRAY_BUFFER, model_coefficients.size() * sizeof(float), NULL, GL_STATIC_DRAW);
-    glBufferSubData(GL_ARRAY_BUFFER, 0, model_coefficients.size() * sizeof(float), model_coefficients.data());
-    GLuint location = 0; // "(location = 0)" em "shader_vertex.glsl"
-    GLint  number_of_dimensions = 4; // vec4 em "shader_vertex.glsl"
-    glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(location);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    if ( !normal_coefficients.empty() )
-    {
-        GLuint VBO_normal_coefficients_id;
-        glGenBuffers(1, &VBO_normal_coefficients_id);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_normal_coefficients_id);
-        glBufferData(GL_ARRAY_BUFFER, normal_coefficients.size() * sizeof(float), NULL, GL_STATIC_DRAW);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, normal_coefficients.size() * sizeof(float), normal_coefficients.data());
-        location = 1; // "(location = 1)" em "shader_vertex.glsl"
-        number_of_dimensions = 4; // vec4 em "shader_vertex.glsl"
-        glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(location);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
-
-    if ( !texture_coefficients.empty() )
-    {
-        GLuint VBO_texture_coefficients_id;
-        glGenBuffers(1, &VBO_texture_coefficients_id);
-        glBindBuffer(GL_ARRAY_BUFFER, VBO_texture_coefficients_id);
-        glBufferData(GL_ARRAY_BUFFER, texture_coefficients.size() * sizeof(float), NULL, GL_STATIC_DRAW);
-        glBufferSubData(GL_ARRAY_BUFFER, 0, texture_coefficients.size() * sizeof(float), texture_coefficients.data());
-        location = 2; // "(location = 1)" em "shader_vertex.glsl"
-        number_of_dimensions = 2; // vec2 em "shader_vertex.glsl"
-        glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
-        glEnableVertexAttribArray(location);
-        glBindBuffer(GL_ARRAY_BUFFER, 0);
-    }
-
-    GLuint indices_id;
-    glGenBuffers(1, &indices_id);
-
-    // "Ligamos" o buffer. Note que o tipo agora é GL_ELEMENT_ARRAY_BUFFER.
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices_id);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), NULL, GL_STATIC_DRAW);
-    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(GLuint), indices.data());
-    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // XXX Errado!
-    //
-
-    // "Desligamos" o VAO, evitando assim que operações posteriores venham a
-    // alterar o mesmo. Isso evita bugs.
-    glBindVertexArray(0);
-}
-
 // Carrega um Vertex Shader de um arquivo GLSL. Veja definição de LoadShader() abaixo.
 GLuint LoadShader_Vertex(const char* filename)
 {
@@ -3491,26 +3287,7 @@ GLuint CreateGpuProgram(GLuint vertex_shader_id, GLuint fragment_shader_id)
     return program_id;
 }
 
-// Definição da função que será chamada sempre que a janela do sistema
-// operacional for redimensionada, por consequência alterando o tamanho do
-// "framebuffer" (região de memória onde são armazenados os pixels da imagem).
-void FramebufferSizeCallback(GLFWwindow* window, int width, int height)
-{
-    // Indicamos que queremos renderizar em toda região do framebuffer. A
-    // função "glViewport" define o mapeamento das "normalized device
-    // coordinates" (NDC) para "pixel coordinates".  Essa é a operação de
-    // "Screen Mapping" ou "Viewport Mapping" vista em aula ({+ViewportMapping2+}).
-    glViewport(0, 0, width, height);
 
-    // Atualizamos também a razão que define a proporção da janela (largura /
-    // altura), a qual será utilizada na definição das matrizes de projeção,
-    // tal que não ocorra distorções durante o processo de "Screen Mapping"
-    // acima, quando NDC é mapeado para coordenadas de pixels. Veja slides 205-215 do documento Aula_09_Projecoes.pdf.
-    //
-    // O cast para float é necessário pois números inteiros são arredondados ao
-    // serem divididos!
-    g_ScreenRatio = (float)width / height;
-}
 
 // Variáveis globais que armazenam a última posição do cursor do mouse, para
 // que possamos calcular quanto que o mouse se movimentou entre dois instantes
@@ -3963,12 +3740,6 @@ void KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mod)
 #endif
 }
 
-// Definimos o callback para impressão de erros da GLFW no terminal
-void ErrorCallback(int error, const char* description)
-{
-    fprintf(stderr, "ERROR: GLFW: %s\n", description);
-}
-
 // Esta função recebe um vértice com coordenadas de modelo p_model e passa o
 // mesmo por todos os sistemas de coordenadas armazenados nas matrizes model,
 // view, e projection; e escreve na tela as matrizes e pontos resultantes
@@ -4096,6 +3867,210 @@ void TextRendering_ShowFramesPerSecond(GLFWwindow* window)
 
     TextRendering_PrintString(window, buffer, 1.0f-(numchars + 1)*charwidth, 1.0f-lineheight, 1.0f);
 }
+
+
+// Constrói triângulos para futura renderização a partir de um ObjModel.
+void BuildTrianglesAndAddToVirtualScene(ObjModel* model){
+    GLuint vertex_array_object_id;
+    glGenVertexArrays(1, &vertex_array_object_id);
+    glBindVertexArray(vertex_array_object_id);
+
+    std::vector<GLuint> indices;
+    std::vector<float>  model_coefficients;
+    std::vector<float>  normal_coefficients;
+    std::vector<float>  texture_coefficients;
+
+    const float minval = std::numeric_limits<float>::min();
+    const float maxval = std::numeric_limits<float>::max();
+
+    // Cor difusa (Kd) de um material do .mtl; cinza neutro quando não há material.
+    auto material_diffuse = [&](int m) -> glm::vec3
+    {
+        if (m >= 0 && m < (int)model->materials.size())
+            return glm::vec3(model->materials[m].diffuse[0],
+                             model->materials[m].diffuse[1],
+                             model->materials[m].diffuse[2]);
+        return glm::vec3(0.8f, 0.8f, 0.8f);
+    };
+    auto material_name = [&](int m) -> std::string
+    {
+        if (m >= 0 && m < (int)model->materials.size())
+            return model->materials[m].name;
+        return std::string("default");
+    };
+
+    for (size_t shape = 0; shape < model->shapes.size(); ++shape)
+    {
+        const tinyobj::mesh_t& mesh = model->shapes[shape].mesh;
+        size_t num_triangles = mesh.num_face_vertices.size();
+        bool has_materials = mesh.material_ids.size() == num_triangles;
+
+        auto tri_material = [&](size_t t) -> int
+        {
+            return has_materials ? mesh.material_ids[t] : -1;
+        };
+
+        // Ordem de aparição dos materiais usados por este shape.
+        std::vector<int> material_order;
+        for (size_t t = 0; t < num_triangles; ++t)
+        {
+            int m = tri_material(t);
+            if (std::find(material_order.begin(), material_order.end(), m) == material_order.end())
+                material_order.push_back(m);
+        }
+        if (material_order.empty())
+            material_order.push_back(-1);
+
+        // Emite os 3 vértices de um triângulo, atualizando buffers e bbox.
+        auto emit_triangle = [&](size_t triangle, glm::vec3& bmin, glm::vec3& bmax)
+        {
+            assert(mesh.num_face_vertices[triangle] == 3);
+            for (size_t vertex = 0; vertex < 3; ++vertex)
+            {
+                tinyobj::index_t idx = mesh.indices[3*triangle + vertex];
+
+                indices.push_back((GLuint)(model_coefficients.size() / 4));
+
+                const float vx = model->attrib.vertices[3*idx.vertex_index + 0];
+                const float vy = model->attrib.vertices[3*idx.vertex_index + 1];
+                const float vz = model->attrib.vertices[3*idx.vertex_index + 2];
+                model_coefficients.push_back( vx ); // X
+                model_coefficients.push_back( vy ); // Y
+                model_coefficients.push_back( vz ); // Z
+                model_coefficients.push_back( 1.0f ); // W
+
+                bmin.x = std::min(bmin.x, vx); bmax.x = std::max(bmax.x, vx);
+                bmin.y = std::min(bmin.y, vy); bmax.y = std::max(bmax.y, vy);
+                bmin.z = std::min(bmin.z, vz); bmax.z = std::max(bmax.z, vz);
+
+                // A tinyobjloader retorna índice -1 quando não há normal/textura.
+                if ( idx.normal_index != -1 )
+                {
+                    normal_coefficients.push_back( model->attrib.normals[3*idx.normal_index + 0] );
+                    normal_coefficients.push_back( model->attrib.normals[3*idx.normal_index + 1] );
+                    normal_coefficients.push_back( model->attrib.normals[3*idx.normal_index + 2] );
+                    normal_coefficients.push_back( 0.0f );
+                }
+
+                if ( idx.texcoord_index != -1 )
+                {
+                    texture_coefficients.push_back( model->attrib.texcoords[2*idx.texcoord_index + 0] );
+                    texture_coefficients.push_back( model->attrib.texcoords[2*idx.texcoord_index + 1] );
+                }
+            }
+        };
+
+        size_t shape_first_index = indices.size();
+        glm::vec3 shape_bbox_min = glm::vec3(maxval,maxval,maxval);
+        glm::vec3 shape_bbox_max = glm::vec3(minval,minval,minval);
+
+        // Para cada material usado, emitimos suas faces num intervalo contíguo e
+        // (quando há mais de um material) registramos um sub-objeto próprio, com a
+        // cor do .mtl. Assim um único shape multi-material (ex.: o carro) pode ser
+        // desenhado peça a peça com cores diferentes.
+        for (int m : material_order)
+        {
+            size_t group_first_index = indices.size();
+            glm::vec3 group_bbox_min = glm::vec3(maxval,maxval,maxval);
+            glm::vec3 group_bbox_max = glm::vec3(minval,minval,minval);
+
+            for (size_t t = 0; t < num_triangles; ++t)
+            {
+                if (tri_material(t) != m)
+                    continue;
+                emit_triangle(t, group_bbox_min, group_bbox_max);
+            }
+
+            shape_bbox_min.x = std::min(shape_bbox_min.x, group_bbox_min.x);
+            shape_bbox_min.y = std::min(shape_bbox_min.y, group_bbox_min.y);
+            shape_bbox_min.z = std::min(shape_bbox_min.z, group_bbox_min.z);
+            shape_bbox_max.x = std::max(shape_bbox_max.x, group_bbox_max.x);
+            shape_bbox_max.y = std::max(shape_bbox_max.y, group_bbox_max.y);
+            shape_bbox_max.z = std::max(shape_bbox_max.z, group_bbox_max.z);
+
+            if (material_order.size() > 1)
+            {
+                SceneObject part;
+                part.name           = model->shapes[shape].name + "_" + material_name(m);
+                part.first_index    = group_first_index;
+                part.num_indices    = indices.size() - group_first_index;
+                part.rendering_mode = GL_TRIANGLES;
+                part.vertex_array_object_id = vertex_array_object_id;
+                part.bbox_min       = group_bbox_min;
+                part.bbox_max       = group_bbox_max;
+                part.diffuse        = material_diffuse(m);
+                g_VirtualScene[part.name] = part;
+            }
+        }
+
+        // Objeto cobrindo o shape inteiro (compatível com os modelos existentes,
+        // que têm 1 material só e continuam sendo desenhados pelo nome do shape).
+        SceneObject theobject;
+        theobject.name           = model->shapes[shape].name;
+        theobject.first_index    = shape_first_index;
+        theobject.num_indices    = indices.size() - shape_first_index;
+        theobject.rendering_mode = GL_TRIANGLES;
+        theobject.vertex_array_object_id = vertex_array_object_id;
+        theobject.bbox_min       = shape_bbox_min;
+        theobject.bbox_max       = shape_bbox_max;
+        theobject.diffuse        = material_diffuse(material_order[0]);
+        g_VirtualScene[model->shapes[shape].name] = theobject;
+    }
+
+    GLuint VBO_model_coefficients_id;
+    glGenBuffers(1, &VBO_model_coefficients_id);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO_model_coefficients_id);
+    glBufferData(GL_ARRAY_BUFFER, model_coefficients.size() * sizeof(float), NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, model_coefficients.size() * sizeof(float), model_coefficients.data());
+    GLuint location = 0; // "(location = 0)" em "shader_vertex.glsl"
+    GLint  number_of_dimensions = 4; // vec4 em "shader_vertex.glsl"
+    glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(location);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    if ( !normal_coefficients.empty() )
+    {
+        GLuint VBO_normal_coefficients_id;
+        glGenBuffers(1, &VBO_normal_coefficients_id);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_normal_coefficients_id);
+        glBufferData(GL_ARRAY_BUFFER, normal_coefficients.size() * sizeof(float), NULL, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, normal_coefficients.size() * sizeof(float), normal_coefficients.data());
+        location = 1; // "(location = 1)" em "shader_vertex.glsl"
+        number_of_dimensions = 4; // vec4 em "shader_vertex.glsl"
+        glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(location);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    if ( !texture_coefficients.empty() )
+    {
+        GLuint VBO_texture_coefficients_id;
+        glGenBuffers(1, &VBO_texture_coefficients_id);
+        glBindBuffer(GL_ARRAY_BUFFER, VBO_texture_coefficients_id);
+        glBufferData(GL_ARRAY_BUFFER, texture_coefficients.size() * sizeof(float), NULL, GL_STATIC_DRAW);
+        glBufferSubData(GL_ARRAY_BUFFER, 0, texture_coefficients.size() * sizeof(float), texture_coefficients.data());
+        location = 2; // "(location = 1)" em "shader_vertex.glsl"
+        number_of_dimensions = 2; // vec2 em "shader_vertex.glsl"
+        glVertexAttribPointer(location, number_of_dimensions, GL_FLOAT, GL_FALSE, 0, 0);
+        glEnableVertexAttribArray(location);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+    }
+
+    GLuint indices_id;
+    glGenBuffers(1, &indices_id);
+
+    // "Ligamos" o buffer. Note que o tipo agora é GL_ELEMENT_ARRAY_BUFFER.
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices_id);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(GLuint), NULL, GL_STATIC_DRAW);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, indices.size() * sizeof(GLuint), indices.data());
+    // glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0); // XXX Errado!
+    //
+
+    // "Desligamos" o VAO, evitando assim que operações posteriores venham a
+    // alterar o mesmo. Isso evita bugs.
+    glBindVertexArray(0);
+}
+
 
 // Função para debugging: imprime no terminal todas informações de um modelo
 // geométrico carregado de um arquivo ".obj".
