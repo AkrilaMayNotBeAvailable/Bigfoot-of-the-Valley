@@ -74,7 +74,8 @@ Por favor, atualize a lista de arquivos fonte no arquivo CMakeLists.txt.")
   endif()
 endforeach()
 
-add_executable(${EXECUTABLE_NAME} ${SOURCES})
+add_executable(${EXECUTABLE_NAME} ${SOURCES}
+  src/utils/utils.cpp)
 
 target_include_directories(${EXECUTABLE_NAME} BEFORE PRIVATE ${PROJECT_SOURCE_DIR}/include)
 

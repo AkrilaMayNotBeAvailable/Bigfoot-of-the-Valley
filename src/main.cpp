@@ -51,6 +51,8 @@
 #include "player.h"
 #include "map_view.h"
 
+
+
 int main(int argc, char* argv[]){
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
     // sistema operacional, onde poderemos renderizar com OpenGL.
@@ -59,29 +61,21 @@ int main(int argc, char* argv[]){
     GLFWwindow* window;
     // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
     float screenRatio = 1.0f;
-    InitialOpenGLFrameWorkConfiguration(window, screenRatio);
+    glfwSetWindowUserPointer(window, &screenRatio);
+    InitialOpenGLFrameWorkConfiguration(window);
 
-    // Definimos a função de callback que será chamada sempre que o usuário
-    // pressionar alguma tecla do teclado ...
+    // Definimos a função de callback que será chamada sempre que o usuário fizer algum input
+    //=============== BIG REFACTOR NEEDED - Hard Difficult
     glfwSetKeyCallback(window, KeyCallback);
-    // ... ou clicar os botões do mouse ...
     glfwSetMouseButtonCallback(window, MouseButtonCallback);
-    // ... ou movimentar o cursor do mouse em cima da janela ...
     glfwSetCursorPosCallback(window, CursorPosCallback);
     glfwSetWindowFocusCallback(window, WindowFocusCallback);
-    // ... ou rolar a "rodinha" do mouse.
     glfwSetScrollCallback(window, ScrollCallback);
-
-    // Imprimimos no terminal informações sobre a GPU do sistema
-    const GLubyte *vendor      = glGetString(GL_VENDOR);
-    const GLubyte *renderer    = glGetString(GL_RENDERER);
-    const GLubyte *glversion   = glGetString(GL_VERSION);
-    const GLubyte *glslversion = glGetString(GL_SHADING_LANGUAGE_VERSION);
-    printf("GPU: %s, %s, OpenGL %s, GLSL %s\n", vendor, renderer, glversion, glslversion);
+    //==================================================
+    PrintInfoGPU();
 
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
-    //
     LoadShadersFromFiles();
 
     // Carregamos duas imagens para serem utilizadas como textura

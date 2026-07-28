@@ -2,6 +2,7 @@
 #define _UTILS_H
 
 #include <cstdio>
+#include <glad/glad.h>   // Criação de contexto OpenGL 3.3
 
 static GLenum glCheckError_(const char *file, int line)
 {
@@ -25,5 +26,7 @@ static GLenum glCheckError_(const char *file, int line)
     return errorCode;
 }
 #define glCheckError() glCheckError_(__FILE__, __LINE__)
+
+void PrintInfoGPU();
 
 #endif // _UTILS_H

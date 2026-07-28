@@ -8,13 +8,10 @@ void ErrorCallback(int error, const char* description){
 // Definição da função que será chamada sempre que a janela do sistema
 // operacional for redimensionada, por consequência alterando o tamanho do
 // "framebuffer" (região de memória onde são armazenados os pixels da imagem).
-void FramebufferSizeCallback(GLFWwindow* window, int width, int height){
     // Indicamos que queremos renderizar em toda região do framebuffer. A
     // função "glViewport" define o mapeamento das "normalized device
     // coordinates" (NDC) para "pixel coordinates".  Essa é a operação de
     // "Screen Mapping" ou "Viewport Mapping" vista em aula ({+ViewportMapping2+}).
-    glViewport(0, 0, width, height);
-
     // Atualizamos também a razão que define a proporção da janela (largura /
     // altura), a qual será utilizada na definição das matrizes de projeção,
     // tal que não ocorra distorções durante o processo de "Screen Mapping"
@@ -22,13 +19,15 @@ void FramebufferSizeCallback(GLFWwindow* window, int width, int height){
     // O cast para float é necessário pois números inteiros são arredondados ao
     // serem divididos!
     // Recupera o ponteiro para screenRatio armazenado na janela
+void FramebufferSizeCallback(GLFWwindow* window, int width, int height){
+    glViewport(0, 0, width, height);
     float* screenRatio = static_cast<float*>(glfwGetWindowUserPointer(window));
     if(screenRatio){
         *screenRatio = (float)width / height;
     }
 }
 
-void InitialOpenGLFrameWorkConfiguration(GLFWwindow*& window, float& screenRatio){
+void InitialOpenGLFrameWorkConfiguration(GLFWwindow*& window){
     if(!glfwInit()){
         fprintf(stderr, "ERROR: glfwInit() failed.\n");
         std::exit(EXIT_FAILURE);
@@ -66,7 +65,6 @@ void InitialOpenGLFrameWorkConfiguration(GLFWwindow*& window, float& screenRatio
     gladLoadGLLoader((GLADloadproc) glfwGetProcAddress);
 
     // Armazena o endereço de screenRatio dentro da janela
-    glfwSetWindowUserPointer(window, &screenRatio);
     FramebufferSizeCallback(window, WINDOW_WIDTH, WINDOW_HEIGHT); // Forçamos a chamada do callback acima, para definir g_ScreenRatio. 
     // Definimos a função de callback que será chamada sempre que a janela for
     // redimensionada, por consequência alterando o tamanho do "framebuffer"

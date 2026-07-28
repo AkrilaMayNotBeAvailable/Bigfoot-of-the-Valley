@@ -6,6 +6,6 @@
 const int WINDOW_WIDTH = 1280;
 const int WINDOW_HEIGHT = 720;
 
-void InitialOpenGLFrameWorkConfiguration(GLFWwindow*& window, float &screenRatio);
+void InitialOpenGLFrameWorkConfiguration(GLFWwindow*& window);
 void ErrorCallback(int error, const char* description);
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
