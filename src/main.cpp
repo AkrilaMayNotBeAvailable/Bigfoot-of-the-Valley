@@ -62,7 +62,7 @@ int main(int argc, char* argv[]){
     InitialOpenGLFrameWorkConfiguration(window); // EXTRACTED FUNCTION
 
     // Definimos a função de callback que será chamada sempre que o usuário fizer algum input
-    //=============== BIG REFACTOR NEEDED - Hard Difficult
+    //=============== BIG REFACTOR NEEDED - Really hard
     glfwSetKeyCallback(window, KeyCallback);
     glfwSetMouseButtonCallback(window, MouseButtonCallback);
     glfwSetCursorPosCallback(window, CursorPosCallback);
@@ -74,56 +74,8 @@ int main(int argc, char* argv[]){
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
     LoadShadersFromFiles();
-
-    // Carregamos duas imagens para serem utilizadas como textura
-    LoadTextureImage("../../data/textures/textura_tijolos.png");      // TextureImage0
-    LoadTextureImage("../../data/textures/textura_grama.png");         // TextureImage1
-    LoadTextureImage("../../data/textures/monster-zero-ultra/MonsterUltra_em.png"); // TextureImage2
-    LoadTextureImage("../../data/textures/rocky_terrain_02_diff_1k.jpg"); // TextureImage3
-    
-    // Construímos a representação de objetos geométricos através de malhas de triângulos
-    ObjModel spheremodel("../../data/models/sphere.obj");
-    ComputeNormals(&spheremodel);
-    BuildTrianglesAndAddToVirtualScene(&spheremodel);
-
-    ObjModel bunnymodel("../../data/models/bunny.obj");
-    ComputeNormals(&bunnymodel);
-    BuildTrianglesAndAddToVirtualScene(&bunnymodel);
-
-    ObjModel planemodel("../../data/models/plane.obj");
-    ComputeNormals(&planemodel);
-    BuildTrianglesAndAddToVirtualScene(&planemodel);
-
-    ObjModel cubemodel("../../data/models/cube.obj");
-    ComputeNormals(&cubemodel);
-    BuildTrianglesAndAddToVirtualScene(&cubemodel);
-
-    ObjModel monsterdrinkmodel("../../data/models/monster-zero-ultra/MonsterSubs.obj", "../../data/models/monster-zero-ultra/");
-    ComputeNormals(&monsterdrinkmodel);
-    BuildTrianglesAndAddToVirtualScene(&monsterdrinkmodel);
-
-    // Carro do estacionamento: shape único "Car_Cube" com 8 materiais (.mtl),
-    // separado em peças "Car_Cube_<Material>" por BuildTrianglesAndAddToVirtualScene.
-    ObjModel carmodel("../../data/models/car/Car.obj", "../../data/models/car/");
-    ComputeNormals(&carmodel);
-    BuildTrianglesAndAddToVirtualScene(&carmodel);
-
-    // Banco de madeira: shape unico "Box008" (Z-up, rotacionado em DrawCampusBench).
-    ObjModel benchmodel("../../data/models/wooden-bench/16452_WoodenBench_NEW.obj", "../../data/models/wooden-bench/");
-    ComputeNormals(&benchmodel);
-    BuildTrianglesAndAddToVirtualScene(&benchmodel);
-
-    // Shotgun em primeira pessoa (Remington 870). Modelo deitado no eixo X:
-    // +X e a boca do cano, -X a empunhadura. Shapes "Cube.002_Cube.003",
-    // "Cube.000_Cube.016" e "Cube.001_Cube.017"; sem .mtl (cor vem do object_id).
-    ObjModel shotgunmodel("../../data/models/shotgun/Remengton_870.obj", "../../data/models/shotgun/");
-    ComputeNormals(&shotgunmodel);
-    BuildTrianglesAndAddToVirtualScene(&shotgunmodel);
-
-    if( argc > 1 ){
-        ObjModel model(argv[1]);
-        BuildTrianglesAndAddToVirtualScene(&model);
-    }
+    LoadGameTextures(); // EXTRACTED FUNCTION
+    BuildModels(argc, argv); // EXTRACTED FUNCTION
 
     // Inicializamos o código para renderização de texto.
     TextRendering_Init();
@@ -137,25 +89,18 @@ int main(int argc, char* argv[]){
 
     // Habilitamos o Z-buffer. Veja slides 104-116 do documento Aula_09_Projecoes.pdf.
     glEnable(GL_DEPTH_TEST);
-
     // Habilitamos o Backface Culling. Veja slides 8-13 do documento Aula_02_Fundamentos_Matematicos.pdf, slides 23-34 do documento Aula_13_Clipping_and_Culling.pdf e slides 112-123 do documento Aula_14_Laboratorio_3_Revisao.pdf.
     glEnable(GL_CULL_FACE);
     glCullFace(GL_BACK);
     glFrontFace(GL_CCW);
 
-    // Ficamos em um loop infinito, renderizando, até que o usuário feche a janela
     float prev_time = (float)glfwGetTime();
     while(!glfwWindowShouldClose(window)){
         float current_time = (float)glfwGetTime();
         float delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        if(g_ShotgunRecoilTimer > 0.0f){
-            g_ShotgunRecoilTimer -= delta_t;
-
-            if(g_ShotgunRecoilTimer < 0.0f)
-                g_ShotgunRecoilTimer = 0.0f;
-        }
+        ShotgunRecoilCounter(delta_t); // EXTRACTED FUNCTION
 
         for(BigfootInstance& instance : g_Bigfoots){
             if(instance.enemy.IsDead() && instance.death_animation_started)
@@ -399,8 +344,7 @@ int main(int argc, char* argv[]){
                     * view;
             }
 
-            if (g_PlayerFallAnimationStarted)
-            {
+            if(g_PlayerFallAnimationStarted){
                 float fall = g_PlayerFallTimer / 1.10f;
 
                 if (fall > 1.0f)
@@ -429,15 +373,12 @@ int main(int argc, char* argv[]){
             float nearplane = -0.1f;  // Posição do "near plane"
             float farplane  = -220.0f; // Posição do "far plane"
 
-            if (g_UsePerspectiveProjection)
-            {
+            if(g_UsePerspectiveProjection){
                 // Projeção Perspectiva.
                 // Para definição do field of view (FOV), veja slides 205-215 do documento Aula_09_Projecoes.pdf.
                 float field_of_view = 3.141592 / 3.0f;
                 projection = Matrix_Perspective(field_of_view, screenRatio, nearplane, farplane);
-            }
-            else
-            {
+            } else {
                 // Projeção Ortográfica.
                 // Para definição dos valores l, r, b, t ("left", "right", "bottom", "top"),
                 // PARA PROJEÇÃO ORTOGRÁFICA veja slides 219-224 do documento Aula_09_Projecoes.pdf.
@@ -493,8 +434,7 @@ int main(int argc, char* argv[]){
         float map_bigfoot_yaw = 0.0f;
         bool has_map_bigfoot = false;
 
-        for (size_t i = 0; i < g_Bigfoots.size(); ++i)
-        {
+        for(size_t i = 0; i < g_Bigfoots.size(); ++i){
             BigfootInstance& instance = g_Bigfoots[i];
             glm::vec3 bigfoot_position = instance.enemy.GetPosition();
             float bigfoot_yaw = UpdateBigfootFacing(i, bigfoot_position, delta_t);
@@ -502,8 +442,7 @@ int main(int argc, char* argv[]){
 
             DrawBigfootModel(bigfoot_position, bigfoot_yaw, current_time, bigfoot_death_progress, instance.movement_intensity);
 
-            if (!has_map_bigfoot && !instance.enemy.IsDead())
-            {
+            if(!has_map_bigfoot && !instance.enemy.IsDead()){
                 map_bigfoot_position = bigfoot_position;
                 map_bigfoot_yaw = bigfoot_yaw;
                 has_map_bigfoot = true;
@@ -512,19 +451,16 @@ int main(int argc, char* argv[]){
 
         // Esfera de debug da hitbox do Pé Grande.
         // Usamos o mesmo raio que será usado para tiro/colisão.
-        if (g_DrawBigfootHitSphere)
-        {
+        if(g_DrawBigfootHitSphere){
             std::vector<BoxObstacle> shot_boxes = GetBigfootShotBoxes();
 
             glDisable(GL_CULL_FACE);
             glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
 
-            for (const BigfootInstance& instance : g_Bigfoots)
-            {
+            for(const BigfootInstance& instance : g_Bigfoots){
                 glm::vec3 bigfoot_position = instance.enemy.GetPosition();
 
-                for (const BoxObstacle& shot_box : shot_boxes)
-                {
+                for(const BoxObstacle& shot_box : shot_boxes){
                     model = Matrix_Translate(bigfoot_position.x, bigfoot_position.y, bigfoot_position.z)
                         * Matrix_Rotate_Y(instance.render_yaw)
                         * Matrix_Translate(shot_box.center.x, shot_box.center.y, shot_box.center.z)
@@ -544,8 +480,7 @@ int main(int argc, char* argv[]){
         // Por enquanto usamos esferas pequenas como placeholder visual.
         std::vector<Collectible>& collectibles = GetSceneCollectibles();
 
-        for (const Collectible& collectible : collectibles)
-        {
+        for(const Collectible& collectible : collectibles){
             if (collectible.collected)
                 continue;
 
@@ -562,8 +497,7 @@ int main(int argc, char* argv[]){
         }
 
         // Desenhamos a zona segura/final somente depois que todos os itens forem coletados.
-        if (AllCollectiblesCollected())
-        {
+        if(AllCollectiblesCollected()){
             const SafeZone& safe_zone = GetSafeZone();
 
             DrawSafeZoneBeacon(safe_zone, current_time);
@@ -757,6 +691,6 @@ int main(int argc, char* argv[]){
 
     StopBackgroundMusic();
     glfwTerminate();
-    // Fim do programa
+
     return 0;
 }

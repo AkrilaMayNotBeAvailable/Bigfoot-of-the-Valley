@@ -149,6 +149,8 @@ void DrawSpectatorText(GLFWwindow* window);
 void ResetSpectatorRunState(bool keepAggressive);
 void SpectatorMechanic(float delta_t);
 void UpdateBigfootCamRequest(GLFWwindow* window, float delta_t);
+void LoadGameTextures();
+void ShotgunRecoilCounter(float delta_t);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4491,6 +4493,67 @@ void UpdateBigfootCamRequest(GLFWwindow* window, float delta_t){
     }
 }
 
+void LoadGameTextures(){
+    LoadTextureImage("../../data/textures/textura_tijolos.png");      // TextureImage0
+    LoadTextureImage("../../data/textures/textura_grama.png");         // TextureImage1
+    LoadTextureImage("../../data/textures/monster-zero-ultra/MonsterUltra_em.png"); // TextureImage2
+    LoadTextureImage("../../data/textures/rocky_terrain_02_diff_1k.jpg"); // TextureImage3
+}
+
+void ShotgunRecoilCounter(float delta_t){
+    if(g_ShotgunRecoilTimer > 0.0f){
+        g_ShotgunRecoilTimer -= delta_t;
+
+        if(g_ShotgunRecoilTimer < 0.0f)
+            g_ShotgunRecoilTimer = 0.0f;
+    }
+}
+
+void BuildModels(int argc, char* argv[]){
+    // Construímos a representação de objetos geométricos através de malhas de triângulos
+    ObjModel spheremodel("../../data/models/sphere.obj");
+    ComputeNormals(&spheremodel);
+    BuildTrianglesAndAddToVirtualScene(&spheremodel);
+
+    ObjModel bunnymodel("../../data/models/bunny.obj");
+    ComputeNormals(&bunnymodel);
+    BuildTrianglesAndAddToVirtualScene(&bunnymodel);
+
+    ObjModel planemodel("../../data/models/plane.obj");
+    ComputeNormals(&planemodel);
+    BuildTrianglesAndAddToVirtualScene(&planemodel);
+
+    ObjModel cubemodel("../../data/models/cube.obj");
+    ComputeNormals(&cubemodel);
+    BuildTrianglesAndAddToVirtualScene(&cubemodel);
+
+    ObjModel monsterdrinkmodel("../../data/models/monster-zero-ultra/MonsterSubs.obj", "../../data/models/monster-zero-ultra/");
+    ComputeNormals(&monsterdrinkmodel);
+    BuildTrianglesAndAddToVirtualScene(&monsterdrinkmodel);
+
+    // Carro do estacionamento: shape único "Car_Cube" com 8 materiais (.mtl),
+    // separado em peças "Car_Cube_<Material>" por BuildTrianglesAndAddToVirtualScene.
+    ObjModel carmodel("../../data/models/car/Car.obj", "../../data/models/car/");
+    ComputeNormals(&carmodel);
+    BuildTrianglesAndAddToVirtualScene(&carmodel);
+
+    // Banco de madeira: shape unico "Box008" (Z-up, rotacionado em DrawCampusBench).
+    ObjModel benchmodel("../../data/models/wooden-bench/16452_WoodenBench_NEW.obj", "../../data/models/wooden-bench/");
+    ComputeNormals(&benchmodel);
+    BuildTrianglesAndAddToVirtualScene(&benchmodel);
+
+    // Shotgun em primeira pessoa (Remington 870). Modelo deitado no eixo X:
+    // +X e a boca do cano, -X a empunhadura. Shapes "Cube.002_Cube.003",
+    // "Cube.000_Cube.016" e "Cube.001_Cube.017"; sem .mtl (cor vem do object_id).
+    ObjModel shotgunmodel("../../data/models/shotgun/Remengton_870.obj", "../../data/models/shotgun/");
+    ComputeNormals(&shotgunmodel);
+    BuildTrianglesAndAddToVirtualScene(&shotgunmodel);
+
+    if( argc > 1 ){
+        ObjModel model(argv[1]);
+        BuildTrianglesAndAddToVirtualScene(&model);
+    }
+}
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
