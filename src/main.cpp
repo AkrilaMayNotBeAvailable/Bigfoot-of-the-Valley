@@ -45,13 +45,10 @@
 #include "glfw_setup.h"
 #include "game_definitions.cpp"
 
-
 //headers do jogo
 #include "camera.h"
 #include "player.h"
 #include "map_view.h"
-
-
 
 int main(int argc, char* argv[]){
     // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
@@ -62,7 +59,7 @@ int main(int argc, char* argv[]){
     // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
     float screenRatio = 1.0f;
     glfwSetWindowUserPointer(window, &screenRatio);
-    InitialOpenGLFrameWorkConfiguration(window);
+    InitialOpenGLFrameWorkConfiguration(window); // EXTRACTED FUNCTION
 
     // Definimos a função de callback que será chamada sempre que o usuário fizer algum input
     //=============== BIG REFACTOR NEEDED - Hard Difficult
@@ -72,7 +69,7 @@ int main(int argc, char* argv[]){
     glfwSetWindowFocusCallback(window, WindowFocusCallback);
     glfwSetScrollCallback(window, ScrollCallback);
     //==================================================
-    PrintInfoGPU();
+    PrintInfoGPU(); // EXTRACTED FUNCTION
 
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
@@ -153,110 +150,24 @@ int main(int argc, char* argv[]){
         float delta_t = current_time - prev_time;
         prev_time = current_time;
 
-        if (g_ShotgunRecoilTimer > 0.0f)
-        {
+        if(g_ShotgunRecoilTimer > 0.0f){
             g_ShotgunRecoilTimer -= delta_t;
 
-            if (g_ShotgunRecoilTimer < 0.0f)
+            if(g_ShotgunRecoilTimer < 0.0f)
                 g_ShotgunRecoilTimer = 0.0f;
         }
 
-        for (BigfootInstance& instance : g_Bigfoots)
-        {
-            if (instance.enemy.IsDead() && instance.death_animation_started)
+        for(BigfootInstance& instance : g_Bigfoots){
+            if(instance.enemy.IsDead() && instance.death_animation_started)
                 instance.death_timer += delta_t;
         }
 
-        if (g_PlayerFallAnimationStarted)
+        if(g_PlayerFallAnimationStarted)
             g_PlayerFallTimer += delta_t;
 
-        if (g_GameState.status == GameStatus::Won &&
-            g_SpectatorMode &&
-            g_SpectatorAutoAdvanceTimer >= 0.0f)
-        {
-            g_SpectatorAutoAdvanceTimer -= delta_t;
-
-            if (g_SpectatorAutoAdvanceTimer <= 0.0f)
-            {
-                bool keep_aggressive = g_SpectatorAggressiveMode;
-                ResetGame(true);
-                g_SpectatorMode = true;
-                g_SpectatorAggressiveMode = keep_aggressive;
-                g_SpectatorWantsShoot = false;
-                g_SpectatorRunning = false;
-                g_SpectatorMovementDirection = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_SpectatorLastPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_SpectatorDetourDirection = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_SpectatorHasLastPosition = false;
-                g_SpectatorStuckTimer = 0.0f;
-                g_SpectatorDetourTimer = 0.0f;
-                g_SpectatorTransitMode = 0;
-                g_SpectatorTransitPortal = -1;
-                g_SpectatorTransitDoor = -1;
-                g_SpectatorAutoAdvanceTimer = -1.0f;
-                g_SpectatorAutoRetryTimer = -1.0f;
-            }
-        }
-
-        if (g_GameState.status == GameStatus::Lost &&
-            g_SpectatorMode &&
-            g_SpectatorAutoRetryTimer >= 0.0f)
-        {
-            g_SpectatorAutoRetryTimer -= delta_t;
-
-            if (g_SpectatorAutoRetryTimer <= 0.0f)
-            {
-                g_SelectedPrestigeLevel = ClampPrestigeLevel(g_RunPrestigeLevel);
-                bool keep_aggressive = g_SpectatorAggressiveMode;
-                ResetGame(true);
-                g_SpectatorMode = true;
-                g_SpectatorAggressiveMode = keep_aggressive;
-                g_SpectatorWantsShoot = false;
-                g_SpectatorRunning = false;
-                g_SpectatorMovementDirection = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_SpectatorLastPosition = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_SpectatorDetourDirection = glm::vec3(0.0f, 0.0f, 0.0f);
-                g_SpectatorHasLastPosition = false;
-                g_SpectatorStuckTimer = 0.0f;
-                g_SpectatorDetourTimer = 0.0f;
-                g_SpectatorTransitMode = 0;
-                g_SpectatorTransitPortal = -1;
-                g_SpectatorTransitDoor = -1;
-                g_SpectatorAutoAdvanceTimer = -1.0f;
-                g_SpectatorAutoRetryTimer = -1.0f;
-            }
-        }
-
+        SpectatorMechanic(delta_t); // EXTRACTED FUNCTION
         UpdateSpectatorController(delta_t);
-
-        // Câmera na cabeça do Pé Grande: ativa enquanto o jogador segura Alt,
-        // tem segundos de visão acumulados e existe um Pé Grande vivo. Drena os
-        // segundos a cada frame e desliga sozinha ao zerar. Indisponível no modo
-        // espectador (piloto-automático de IA).
-        {
-            bool alt_held =
-                glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
-                glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
-
-            glm::vec4 cam_pos = g_Camera.GetPosition();
-
-            // Contexto que pertence ao main: o jogador está pedindo a câmera
-            // (ALT durante o jogo, fora do espectador/mapa) e há um Pé Grande
-            // alvo por perto. A política do recurso (segundos de visão) e o
-            // consumo ficam dentro de UpdateBigfootCam.
-            bool wants_cam =
-                g_GameState.status == GameStatus::Playing &&
-                !g_SpectatorMode &&
-#if MAP_VIEW_ENABLED
-                !g_MapView.IsActive() &&
-#endif
-                alt_held;
-
-            bool target_available =
-                NearestLiveBigfootIndex(glm::vec3(cam_pos.x, cam_pos.y, cam_pos.z)) >= 0;
-
-            UpdateBigfootCam(wants_cam, target_available, delta_t);
-        }
+        UpdateBigfootCamRequest(window, delta_t); // EXTRACTED FUNCTION
 
         bool movement_key_pressed =
             glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
@@ -317,29 +228,7 @@ int main(int argc, char* argv[]){
         }
 
         glm::vec4 player_position = g_Camera.GetPosition();
-
-        // Intensidade de caminhada do jogador, derivada do deslocamento real.
-        // Anima as pernas do corpo do caçador exibido no Modo Monstro.
-        if (g_GameState.status == GameStatus::Playing)
-        {
-            glm::vec3 cur = glm::vec3(player_position.x, player_position.y, player_position.z);
-            float target_intensity = 0.0f;
-
-            if (g_PlayerHasPrevPosition && delta_t > 0.0001f)
-            {
-                glm::vec3 moved = cur - g_PlayerPrevPosition;
-                moved.y = 0.0f;
-                float speed = sqrt(moved.x*moved.x + moved.z*moved.z) / delta_t;
-                target_intensity = speed / 5.8f; // normaliza pela velocidade de caminhada
-                if (target_intensity > 1.0f)
-                    target_intensity = 1.0f;
-            }
-
-            float blend = 1.0f - exp(-delta_t * 8.0f);
-            g_PlayerWalkIntensity += (target_intensity - g_PlayerWalkIntensity) * blend;
-            g_PlayerPrevPosition = cur;
-            g_PlayerHasPrevPosition = true;
-        }
+        UpdatePlayerWalkIntensity(delta_t, player_position);
 
         if (g_GameState.status == GameStatus::Playing
 #if MAP_VIEW_ENABLED
@@ -737,12 +626,9 @@ int main(int argc, char* argv[]){
         // (O antigo tint vermelho 2D do Modo Monstro foi substituído pelo filtro
         // térmico/infravermelho aplicado por fragmento em shader_fragment.glsl,
         // via uniform u_monster_vision_active.)
-
         // TextRendering_ShowEulerAngles(window);
-
         // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
         // TextRendering_ShowProjection(window);
-
         // Imprimimos na tela informação sobre o número de quadros renderizados
         // por segundo (frames per second).
         TextRendering_ShowFramesPerSecond(window);
@@ -844,8 +730,7 @@ int main(int argc, char* argv[]){
             TextRendering_PrintString(window, vision_hud, -0.95f, 0.62f, 1.02f);
 
             // Indicador quando o jogador está observando pela cabeça do Pé Grande.
-            if (IsBigfootCamActive())
-            {
+            if(IsBigfootCamActive()){
                 char bigfoot_cam_text[64];
                 snprintf(
                     bigfoot_cam_text,
@@ -855,8 +740,9 @@ int main(int argc, char* argv[]){
                 );
                 TextRendering_PrintString(window, bigfoot_cam_text, -0.32f, 0.82f, 1.0f);
             }
-            DrawSpectatorText(window);
-            DrawStageClearWinText(window, collected_count, total_count);
+
+            DrawSpectatorText(window); // EXTRACTED FUNCTION
+            DrawStageClearWinText(window, collected_count, total_count); // EXTRACTED FUNCTION
 
 // Mira simples no centro da tela.
 #if MAP_VIEW_ENABLED
@@ -870,11 +756,7 @@ int main(int argc, char* argv[]){
     }
 
     StopBackgroundMusic();
-
-    // Finalizamos o uso dos recursos do sistema operacional
     glfwTerminate();
-
     // Fim do programa
     return 0;
 }
-

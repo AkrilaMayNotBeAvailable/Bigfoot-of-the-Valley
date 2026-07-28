@@ -140,10 +140,16 @@ struct SceneObject
 
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 
-
+// EXTRACTED FUNCTIONS FROM MAIN:
+//===================================================================
 void DrawMainMenu(GLFWwindow* window);
 void DrawStageClearWinText(GLFWwindow* window, int collected_count, int total_count);
+void UpdatePlayerWalkIntensity(float delta_t, glm::vec4 player_position);
 void DrawSpectatorText(GLFWwindow* window);
+void ResetSpectatorRunState(bool keepAggressive);
+void SpectatorMechanic(float delta_t);
+void UpdateBigfootCamRequest(GLFWwindow* window, float delta_t);
+//===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
 
@@ -4381,6 +4387,107 @@ void DrawSpectatorText(GLFWwindow* window){
             g_SpectatorAutoRetryTimer
         );
         TextRendering_PrintString(window, spectator_retry_text, -0.38f, 0.44f, 0.98f);
+    }
+}
+
+// Intensidade de caminhada do jogador, derivada do deslocamento real.
+// Anima as pernas do corpo do caçador exibido no Modo Monstro.
+void UpdatePlayerWalkIntensity(float delta_t, glm::vec4 player_position){
+    if(g_GameState.status == GameStatus::Playing){
+        glm::vec3 cur = glm::vec3(player_position.x, player_position.y, player_position.z);
+        float target_intensity = 0.0f;
+
+        if (g_PlayerHasPrevPosition && delta_t > 0.0001f)
+        {
+            glm::vec3 moved = cur - g_PlayerPrevPosition;
+            moved.y = 0.0f;
+            float speed = sqrt(moved.x*moved.x + moved.z*moved.z) / delta_t;
+            target_intensity = speed / 5.8f; // normaliza pela velocidade de caminhada
+            if (target_intensity > 1.0f)
+                target_intensity = 1.0f;
+        }
+
+        float blend = 1.0f - exp(-delta_t * 8.0f);
+        g_PlayerWalkIntensity += (target_intensity - g_PlayerWalkIntensity) * blend;
+        g_PlayerPrevPosition = cur;
+        g_PlayerHasPrevPosition = true;
+    }
+}
+
+void ResetSpectatorRunState(bool keepAggressive){
+    g_SpectatorMode = true;
+    g_SpectatorAggressiveMode = keepAggressive;
+    g_SpectatorWantsShoot = false;
+    g_SpectatorRunning = false;
+    g_SpectatorMovementDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+    g_SpectatorLastPosition = glm::vec3(0.0f, 0.0f, 0.0f);
+    g_SpectatorDetourDirection = glm::vec3(0.0f, 0.0f, 0.0f);
+    g_SpectatorHasLastPosition = false;
+    g_SpectatorStuckTimer = 0.0f;
+    g_SpectatorDetourTimer = 0.0f;
+    g_SpectatorTransitMode = 0;
+    g_SpectatorTransitPortal = -1;
+    g_SpectatorTransitDoor = -1;
+    g_SpectatorAutoAdvanceTimer = -1.0f;
+    g_SpectatorAutoRetryTimer = -1.0f;
+}
+
+void SpectatorMechanic(float delta_t){
+    if(g_GameState.status == GameStatus::Won &&
+        g_SpectatorMode &&
+        g_SpectatorAutoAdvanceTimer >= 0.0f){
+        g_SpectatorAutoAdvanceTimer -= delta_t;
+
+        if(g_SpectatorAutoAdvanceTimer <= 0.0f){
+            bool keep_aggressive = g_SpectatorAggressiveMode;
+            ResetGame(true);
+            ResetSpectatorRunState(keep_aggressive); // REFACTORED FUNCTION
+        }
+    }
+
+    if(g_GameState.status == GameStatus::Lost &&
+        g_SpectatorMode &&
+        g_SpectatorAutoRetryTimer >= 0.0f){
+
+        g_SpectatorAutoRetryTimer -= delta_t;
+
+        if(g_SpectatorAutoRetryTimer <= 0.0f){
+            g_SelectedPrestigeLevel = ClampPrestigeLevel(g_RunPrestigeLevel);
+            bool keep_aggressive = g_SpectatorAggressiveMode;
+            ResetGame(true);
+            ResetSpectatorRunState(keep_aggressive); // REFACTORED FUNCTION
+        }
+    }
+}
+
+void UpdateBigfootCamRequest(GLFWwindow* window, float delta_t){
+    // Câmera na cabeça do Pé Grande: ativa enquanto o jogador segura Alt,
+    // tem segundos de visão acumulados e existe um Pé Grande vivo. Drena os
+    // segundos a cada frame e desliga sozinha ao zerar. Indisponível no modo
+    // espectador (piloto-automático de IA).
+    {
+        bool alt_held =
+            glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS ||
+            glfwGetKey(window, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
+
+        glm::vec4 cam_pos = g_Camera.GetPosition();
+
+        // Contexto que pertence ao main: o jogador está pedindo a câmera
+        // (ALT durante o jogo, fora do espectador/mapa) e há um Pé Grande
+        // alvo por perto. A política do recurso (segundos de visão) e o
+        // consumo ficam dentro de UpdateBigfootCam.
+        bool wants_cam =
+            g_GameState.status == GameStatus::Playing &&
+            !g_SpectatorMode &&
+#if MAP_VIEW_ENABLED
+            !g_MapView.IsActive() &&
+#endif
+            alt_held;
+
+        bool target_available =
+            NearestLiveBigfootIndex(glm::vec3(cam_pos.x, cam_pos.y, cam_pos.z)) >= 0;
+
+        UpdateBigfootCam(wants_cam, target_available, delta_t);
     }
 }
 
