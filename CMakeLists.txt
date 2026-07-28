@@ -23,6 +23,7 @@ set(SOURCES
   src/upgrades.cpp
   src/monster_cam.cpp
   src/player_model.cpp
+  src/glfw_setup.cpp
 )
 
 cmake_minimum_required(VERSION 3.10)
