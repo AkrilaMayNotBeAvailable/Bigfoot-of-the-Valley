@@ -141,7 +141,7 @@ struct SceneObject
 // Abaixo definimos variáveis globais utilizadas em várias funções do código.
 
 
-
+void DrawMainMenu(GLFWwindow* window);
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
 
 
@@ -4220,6 +4220,100 @@ void PrintObjModelInfo(ObjModel* model)
     printf("\n");
   }
 }
+
+void DrawMainMenu(GLFWwindow* window){
+    if(g_GameState.status == GameStatus::MainMenu){
+            int max_visible_levels = 6;
+            int first_level = g_SelectedPrestigeLevel - max_visible_levels / 2;
+
+            if (first_level < 0)
+                first_level = 0;
+
+            if (first_level > g_HighestUnlockedPrestigeLevel - max_visible_levels + 1)
+                first_level = g_HighestUnlockedPrestigeLevel - max_visible_levels + 1;
+
+            if (first_level < 0)
+                first_level = 0;
+
+            int last_level = first_level + max_visible_levels - 1;
+
+            if (last_level > g_HighestUnlockedPrestigeLevel)
+                last_level = g_HighestUnlockedPrestigeLevel;
+
+            int visible_rows = last_level - first_level + 1;
+            int selected_row_in_view = g_SelectedPrestigeLevel - first_level;
+
+            DrawMainMenuPanel(window, selected_row_in_view, visible_rows);
+
+            TextRendering_PrintString(window, "Pe Grande do Vale", -0.70f, 0.28f, 1.55f);
+            TextRendering_PrintString(window, "Colete os energeticos e fuja para a zona segura.", -0.70f, 0.14f, 1.0f);
+
+            // Cabecalho e colunas alinhadas (fonte e proporcional, entao posicionamos
+            // cada coluna em um x fixo em NDC).
+            float col_marker = -0.58f;
+            float col_level  = -0.50f;
+            float col_status = -0.32f;
+            float col_pes    = -0.12f;
+            float col_latas  =  0.02f;
+            float col_vida   =  0.18f;
+            float col_vel    =  0.40f;
+            float header_scale = 0.80f;
+            float row_scale    = 0.78f;
+
+            TextRendering_PrintString(window, "Nivel",      col_level,  -0.08f, header_scale);
+            TextRendering_PrintString(window, "Status",     col_status, -0.08f, header_scale);
+            TextRendering_PrintString(window, "Pes",        col_pes,    -0.08f, header_scale);
+            TextRendering_PrintString(window, "Latas",      col_latas,  -0.08f, header_scale);
+            TextRendering_PrintString(window, "Vida",       col_vida,   -0.08f, header_scale);
+            TextRendering_PrintString(window, "Velocidade", col_vel,    -0.08f, header_scale);
+
+            for (int level = first_level; level <= last_level; ++level){
+                float health_multiplier = GetPrestigeHealthMultiplierForLevel(level);
+                float speed_multiplier = GetPrestigeSpeedMultiplierForLevel(level);
+                bool is_selected = (level == g_SelectedPrestigeLevel);
+                bool is_frontier = (level == g_HighestUnlockedPrestigeLevel);
+                const char* marker = is_selected ? ">>" : "  ";
+                const char* status = is_frontier ? "NOVO" : "vencido";
+
+                float row_y = -0.17f - (level - first_level) * 0.085f;
+
+                char buf[32];
+
+                TextRendering_PrintString(window, marker, col_marker, row_y, row_scale);
+
+                snprintf(buf, sizeof(buf), "%02d", level + 1);
+                TextRendering_PrintString(window, buf, col_level, row_y, row_scale);
+
+                TextRendering_PrintString(window, status, col_status, row_y, row_scale);
+
+                snprintf(buf, sizeof(buf), "%d", GetBigfootCountForLevel(level));
+                TextRendering_PrintString(window, buf, col_pes, row_y, row_scale);
+
+                snprintf(buf, sizeof(buf), "%d", GetPrestigeCollectibleCountForLevel(level));
+                TextRendering_PrintString(window, buf, col_latas, row_y, row_scale);
+
+                snprintf(buf, sizeof(buf), "x%.2f", health_multiplier);
+                TextRendering_PrintString(window, buf, col_vida, row_y, row_scale);
+
+                snprintf(buf, sizeof(buf), "x%.2f", speed_multiplier);
+                TextRendering_PrintString(window, buf, col_vel, row_y, row_scale);
+            }
+
+            TextRendering_PrintString(window, "[SPACE] iniciar  [W/S] nivel  [U] loja", -0.52f, -0.66f, 0.92f);
+            TextRendering_PrintString(window, "[X] Resetar progresso", -0.22f, -0.76f, 0.86f);
+
+            char coins_hud[64];
+            snprintf(coins_hud, sizeof(coins_hud), "Pontos: %d", GetRawCoins());
+            TextRendering_PrintString(window, coins_hud, -0.95f, 0.82f, 1.12f);
+        }
+        else if (g_GameState.status == GameStatus::UpgradeShop){
+            DrawUpgradeShopOverlay(window);
+        }
+        else if (g_GameState.status == GameStatus::ConfirmReset){
+            DrawConfirmResetOverlay(window);
+        }
+}
+
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
