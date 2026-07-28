@@ -581,109 +581,7 @@ int main(int argc, char* argv[]){
         }
 #endif
         DrawMainMenu(window);
-
-        // Barra textual de vida do Pé Grande no topo da tela.
-        if (g_GameState.status != GameStatus::MainMenu &&
-            g_GameState.status != GameStatus::UpgradeShop &&
-            g_GameState.status != GameStatus::ConfirmReset)
-        {
-            float total_bigfoot_health = 0.0f;
-            float total_bigfoot_max_health = 0.0f;
-
-            for (const BigfootInstance& instance : g_Bigfoots)
-            {
-                total_bigfoot_health += instance.enemy.GetHealth();
-                total_bigfoot_max_health += instance.enemy.GetMaxHealth();
-            }
-
-            float health_ratio = (total_bigfoot_max_health > 0.0f)
-                ? total_bigfoot_health / total_bigfoot_max_health
-                : 0.0f;
-
-            if (health_ratio < 0.0f)
-                health_ratio = 0.0f;
-
-            if (health_ratio > 1.0f)
-                health_ratio = 1.0f;
-
-            DrawBigfootHealthBar(window, health_ratio);
-
-            if (g_Player.IsEnergyBoostActive())
-            {
-                char boost_text[64];
-                if (g_Player.IsInfiniteBoostCheatActive())
-                    snprintf(boost_text, sizeof(boost_text), "ENERGIA x2");
-                else
-                    snprintf(boost_text, sizeof(boost_text), "ENERGIA x2  %.1fs", g_Player.GetEnergyBoostTimeRemaining());
-
-                TextRendering_PrintString(
-                    window,
-                    boost_text,
-                    -0.19f,
-                    -0.72f,
-                    1.0f
-                );
-            }
-
-            // HUD temporário dos coletáveis.
-            std::vector<Collectible>& hud_collectibles = GetSceneCollectibles();
-
-            int collected_count = 0;
-            int total_count = (int)hud_collectibles.size();
-
-            for (const Collectible& collectible : hud_collectibles)
-            {
-                if (collectible.collected)
-                    collected_count++;
-            }
-
-            char collectibles_text[32];
-            snprintf(
-                collectibles_text,
-                32,
-                "Coletados: %d/%d",
-                collected_count,
-                total_count
-            );
-
-            TextRendering_PrintString(
-                window,
-                collectibles_text,
-                -0.95f,
-                0.82f,
-                1.12f
-            );
-
-            char coins_hud[64];
-            snprintf(coins_hud, sizeof(coins_hud), "Pontos: %d", GetRawCoins());
-            TextRendering_PrintString(window, coins_hud, -0.95f, 0.72f, 1.02f);
-
-            // Segundos de visão acumulados (recurso da câmera do Pé Grande, tecla Alt).
-            char vision_hud[64];
-            snprintf(vision_hud, sizeof(vision_hud), "Modo Monstro: %.1fs", GetVisionSeconds());
-            TextRendering_PrintString(window, vision_hud, -0.95f, 0.62f, 1.02f);
-
-            // Indicador quando o jogador está observando pela cabeça do Pé Grande.
-            if(IsBigfootCamActive()){
-                char bigfoot_cam_text[64];
-                snprintf(
-                    bigfoot_cam_text,
-                    sizeof(bigfoot_cam_text),
-                    "MODO MONSTRO  %.1fs",
-                    GetVisionSeconds()
-                );
-                TextRendering_PrintString(window, bigfoot_cam_text, -0.32f, 0.82f, 1.0f);
-            }
-
-            DrawSpectatorText(window); // EXTRACTED FUNCTION
-            DrawStageClearWinText(window, collected_count, total_count); // EXTRACTED FUNCTION
-
-// Mira simples no centro da tela.
-#if MAP_VIEW_ENABLED
-    if (!g_MapView.IsActive())
-#endif
-            TextRendering_PrintString(window,"x",-0.01f,0.0f,1.5f);
-        }
+        TextDrawingChunk(window);
 
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -694,3 +592,4 @@ int main(int argc, char* argv[]){
 
     return 0;
 }
+
