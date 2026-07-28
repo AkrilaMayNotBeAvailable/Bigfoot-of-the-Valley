@@ -767,230 +767,105 @@ int main(int argc, char* argv[]){
             g_GameState.status != GameStatus::UpgradeShop &&
             g_GameState.status != GameStatus::ConfirmReset)
         {
-        float total_bigfoot_health = 0.0f;
-        float total_bigfoot_max_health = 0.0f;
+            float total_bigfoot_health = 0.0f;
+            float total_bigfoot_max_health = 0.0f;
 
-        for (const BigfootInstance& instance : g_Bigfoots)
-        {
-            total_bigfoot_health += instance.enemy.GetHealth();
-            total_bigfoot_max_health += instance.enemy.GetMaxHealth();
-        }
+            for (const BigfootInstance& instance : g_Bigfoots)
+            {
+                total_bigfoot_health += instance.enemy.GetHealth();
+                total_bigfoot_max_health += instance.enemy.GetMaxHealth();
+            }
 
-        float health_ratio = (total_bigfoot_max_health > 0.0f)
-            ? total_bigfoot_health / total_bigfoot_max_health
-            : 0.0f;
+            float health_ratio = (total_bigfoot_max_health > 0.0f)
+                ? total_bigfoot_health / total_bigfoot_max_health
+                : 0.0f;
 
-        if (health_ratio < 0.0f)
-            health_ratio = 0.0f;
+            if (health_ratio < 0.0f)
+                health_ratio = 0.0f;
 
-        if (health_ratio > 1.0f)
-            health_ratio = 1.0f;
+            if (health_ratio > 1.0f)
+                health_ratio = 1.0f;
 
-        DrawBigfootHealthBar(window, health_ratio);
+            DrawBigfootHealthBar(window, health_ratio);
 
-        if (g_Player.IsEnergyBoostActive())
-        {
-            char boost_text[64];
-            if (g_Player.IsInfiniteBoostCheatActive())
-                snprintf(boost_text, sizeof(boost_text), "ENERGIA x2");
-            else
-                snprintf(boost_text, sizeof(boost_text), "ENERGIA x2  %.1fs", g_Player.GetEnergyBoostTimeRemaining());
+            if (g_Player.IsEnergyBoostActive())
+            {
+                char boost_text[64];
+                if (g_Player.IsInfiniteBoostCheatActive())
+                    snprintf(boost_text, sizeof(boost_text), "ENERGIA x2");
+                else
+                    snprintf(boost_text, sizeof(boost_text), "ENERGIA x2  %.1fs", g_Player.GetEnergyBoostTimeRemaining());
 
-            TextRendering_PrintString(
-                window,
-                boost_text,
-                -0.19f,
-                -0.72f,
-                1.0f
-            );
-        }
+                TextRendering_PrintString(
+                    window,
+                    boost_text,
+                    -0.19f,
+                    -0.72f,
+                    1.0f
+                );
+            }
 
-        // HUD temporário dos coletáveis.
-        std::vector<Collectible>& hud_collectibles = GetSceneCollectibles();
+            // HUD temporário dos coletáveis.
+            std::vector<Collectible>& hud_collectibles = GetSceneCollectibles();
 
-        int collected_count = 0;
-        int total_count = (int)hud_collectibles.size();
+            int collected_count = 0;
+            int total_count = (int)hud_collectibles.size();
 
-        for (const Collectible& collectible : hud_collectibles)
-        {
-            if (collectible.collected)
-                collected_count++;
-        }
+            for (const Collectible& collectible : hud_collectibles)
+            {
+                if (collectible.collected)
+                    collected_count++;
+            }
 
-        char collectibles_text[32];
-        snprintf(
-            collectibles_text,
-            32,
-            "Coletados: %d/%d",
-            collected_count,
-            total_count
-        );
-
-        TextRendering_PrintString(
-            window,
-            collectibles_text,
-            -0.95f,
-            0.82f,
-            1.12f
-        );
-
-        char coins_hud[64];
-        snprintf(coins_hud, sizeof(coins_hud), "Pontos: %d", GetRawCoins());
-        TextRendering_PrintString(window, coins_hud, -0.95f, 0.72f, 1.02f);
-
-        // Segundos de visão acumulados (recurso da câmera do Pé Grande, tecla Alt).
-        char vision_hud[64];
-        snprintf(vision_hud, sizeof(vision_hud), "Modo Monstro: %.1fs", GetVisionSeconds());
-        TextRendering_PrintString(window, vision_hud, -0.95f, 0.62f, 1.02f);
-
-        // Indicador quando o jogador está observando pela cabeça do Pé Grande.
-        if (IsBigfootCamActive())
-        {
-            char bigfoot_cam_text[64];
+            char collectibles_text[32];
             snprintf(
-                bigfoot_cam_text,
-                sizeof(bigfoot_cam_text),
-                "MODO MONSTRO  %.1fs",
-                GetVisionSeconds()
+                collectibles_text,
+                32,
+                "Coletados: %d/%d",
+                collected_count,
+                total_count
             );
-            TextRendering_PrintString(window, bigfoot_cam_text, -0.32f, 0.82f, 1.0f);
-        }
 
-        if (g_GameState.status == GameStatus::Playing && g_SpectatorMode)
-        {
             TextRendering_PrintString(
                 window,
-                g_SpectatorAggressiveMode ? "SPECTATOR IA AGRESSIVA" : "SPECTATOR IA",
-                g_SpectatorAggressiveMode ? 0.42f : 0.58f,
+                collectibles_text,
+                -0.95f,
                 0.82f,
-                g_SpectatorAggressiveMode ? 0.86f : 1.0f
-            );
-        }
-        else if (g_GameState.status == GameStatus::Won &&
-                 g_SpectatorMode &&
-                 g_SpectatorAutoAdvanceTimer >= 0.0f)
-        {
-            char spectator_next_text[64];
-            snprintf(
-                spectator_next_text,
-                sizeof(spectator_next_text),
-                "SPECTATOR: proximo nivel em %.1fs",
-                g_SpectatorAutoAdvanceTimer
-            );
-            TextRendering_PrintString(window, spectator_next_text, -0.34f, 0.44f, 0.98f);
-        }
-        else if (g_GameState.status == GameStatus::Lost &&
-                 g_SpectatorMode &&
-                 g_SpectatorAutoRetryTimer >= 0.0f)
-        {
-            char spectator_retry_text[64];
-            snprintf(
-                spectator_retry_text,
-                sizeof(spectator_retry_text),
-                "SPECTATOR: tentando de novo em %.1fs",
-                g_SpectatorAutoRetryTimer
-            );
-            TextRendering_PrintString(window, spectator_retry_text, -0.38f, 0.44f, 0.98f);
-        }
-
-        if (g_GameState.status == GameStatus::Won)
-        {
-            char win_prestige_text[64];
-
-            if (g_LastWinUnlockedNewLevel)
-            {
-                snprintf(
-                    win_prestige_text,
-                    sizeof(win_prestige_text),
-                    "Nivel %d liberado.",
-                    g_HighestUnlockedPrestigeLevel + 1
-                );
-            }
-            else
-            {
-                snprintf(
-                    win_prestige_text,
-                    sizeof(win_prestige_text),
-                    "Nivel %d concluido.",
-                    g_RunPrestigeLevel + 1
-                );
-            }
-
-            TextRendering_PrintString(
-                window,
-                "VITORIA!",
-                -0.35f,
-                0.80f,
-                1.35f
-            );
-            TextRendering_PrintString(
-                window,
-                win_prestige_text,
-                -0.38f,
-                0.68f,
-                1.08f
-            );
-            TextRendering_PrintString(
-                window,
-                "Aperte R para voltar ao menu.",
-                -0.42f,
-                0.56f,
-                1.08f
-            );
-        }
-        else if (g_GameState.status == GameStatus::Lost)
-        {
-            TextRendering_PrintString(
-                window,
-                "DERROTA! Foi papado",
-                -0.40f,
-                0.80f,
-                1.35f
-            );
-            TextRendering_PrintString(
-                window,
-                "Aperte R para voltar ao menu.",
-                -0.42f,
-                0.68f,
-                1.08f
-            );
-        }
-        else if (collected_count == total_count)
-        {
-            TextRendering_PrintString(
-                window,
-                "Volte para a zona segura.",
-                -0.40f,
-                0.80f,
                 1.12f
             );
-        }
 
-        // Mira simples no centro da tela.
+            char coins_hud[64];
+            snprintf(coins_hud, sizeof(coins_hud), "Pontos: %d", GetRawCoins());
+            TextRendering_PrintString(window, coins_hud, -0.95f, 0.72f, 1.02f);
+
+            // Segundos de visão acumulados (recurso da câmera do Pé Grande, tecla Alt).
+            char vision_hud[64];
+            snprintf(vision_hud, sizeof(vision_hud), "Modo Monstro: %.1fs", GetVisionSeconds());
+            TextRendering_PrintString(window, vision_hud, -0.95f, 0.62f, 1.02f);
+
+            // Indicador quando o jogador está observando pela cabeça do Pé Grande.
+            if (IsBigfootCamActive())
+            {
+                char bigfoot_cam_text[64];
+                snprintf(
+                    bigfoot_cam_text,
+                    sizeof(bigfoot_cam_text),
+                    "MODO MONSTRO  %.1fs",
+                    GetVisionSeconds()
+                );
+                TextRendering_PrintString(window, bigfoot_cam_text, -0.32f, 0.82f, 1.0f);
+            }
+            DrawSpectatorText(window);
+            DrawStageClearWinText(window, collected_count, total_count);
+
+// Mira simples no centro da tela.
 #if MAP_VIEW_ENABLED
-        if (!g_MapView.IsActive())
+    if (!g_MapView.IsActive())
 #endif
-        TextRendering_PrintString(
-            window,
-            "x",
-            -0.01f,
-            0.0f,
-            1.5f
-        );
+            TextRendering_PrintString(window,"x",-0.01f,0.0f,1.5f);
         }
 
-        // O framebuffer onde OpenGL executa as operações de renderização não
-        // é o mesmo que está sendo mostrado para o usuário, caso contrário
-        // seria possível ver artefatos conhecidos como "screen tearing". A
-        // chamada abaixo faz a troca dos buffers, mostrando para o usuário
-        // tudo que foi renderizado pelas funções acima.
-        // Veja o link: https://en.wikipedia.org/w/index.php?title=Multiple_buffering&oldid=793452829#Double_buffering_in_computer_graphics
         glfwSwapBuffers(window);
-
-        // Verificamos com o sistema operacional se houve alguma interação do
-        // usuário (teclado, mouse, ...). Caso positivo, as funções de callback
-        // definidas anteriormente usando glfwSet*Callback() serão chamadas
-        // pela biblioteca GLFW.
         glfwPollEvents();
     }
 
@@ -1002,3 +877,4 @@ int main(int argc, char* argv[]){
     // Fim do programa
     return 0;
 }
+

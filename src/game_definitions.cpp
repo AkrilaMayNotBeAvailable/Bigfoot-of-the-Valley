@@ -142,6 +142,9 @@ struct SceneObject
 
 
 void DrawMainMenu(GLFWwindow* window);
+void DrawStageClearWinText(GLFWwindow* window, int collected_count, int total_count);
+void DrawSpectatorText(GLFWwindow* window);
+
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
 
 
@@ -4221,6 +4224,11 @@ void PrintObjModelInfo(ObjModel* model)
   }
 }
 
+
+//======================================================================/
+// Briefly Refactored Functions from main section.
+// 28/07/2026
+//======================================================================
 void DrawMainMenu(GLFWwindow* window){
     if(g_GameState.status == GameStatus::MainMenu){
             int max_visible_levels = 6;
@@ -4312,6 +4320,68 @@ void DrawMainMenu(GLFWwindow* window){
         else if (g_GameState.status == GameStatus::ConfirmReset){
             DrawConfirmResetOverlay(window);
         }
+}
+
+void DrawStageClearWinText(GLFWwindow* window, int collected_count, int total_count){
+    if(g_GameState.status == GameStatus::Won){
+        char win_prestige_text[64];
+
+        if(g_LastWinUnlockedNewLevel){
+            snprintf(win_prestige_text, sizeof(win_prestige_text), "Nivel %d liberado.", g_HighestUnlockedPrestigeLevel + 1);
+        }
+        else{
+            snprintf(win_prestige_text, sizeof(win_prestige_text), "Nivel %d concluido.", g_RunPrestigeLevel + 1);
+        }
+
+        TextRendering_PrintString(window, "VITORIA!", -0.35f, 0.80f, 1.35f);
+        TextRendering_PrintString(window, win_prestige_text, -0.38f, 0.68f, 1.08f);
+        TextRendering_PrintString(window, "Aperte R para voltar ao menu.", -0.42f, 0.56f, 1.08f);
+    }
+    else if (g_GameState.status == GameStatus::Lost){
+        TextRendering_PrintString(window, "DERROTA! Foi papado", -0.40f, 0.80f, 1.35f);
+        TextRendering_PrintString(window, "Aperte R para voltar ao menu.", -0.42f, 0.68f, 1.08f);
+    }
+    else if (collected_count == total_count){
+        TextRendering_PrintString(window, "Volte para a zona segura.", -0.40f, 0.80f, 1.12f);
+    }
+}
+
+void DrawSpectatorText(GLFWwindow* window){
+    if (g_GameState.status == GameStatus::Playing && g_SpectatorMode){
+        TextRendering_PrintString(
+            window,
+            g_SpectatorAggressiveMode ? "SPECTATOR IA AGRESSIVA" : "SPECTATOR IA",
+            g_SpectatorAggressiveMode ? 0.42f : 0.58f,
+            0.82f,
+            g_SpectatorAggressiveMode ? 0.86f : 1.0f
+        );
+    }
+    else if (g_GameState.status == GameStatus::Won &&
+            g_SpectatorMode &&
+            g_SpectatorAutoAdvanceTimer >= 0.0f)
+    {
+        char spectator_next_text[64];
+        snprintf(
+            spectator_next_text,
+            sizeof(spectator_next_text),
+            "SPECTATOR: proximo nivel em %.1fs",
+            g_SpectatorAutoAdvanceTimer
+        );
+        TextRendering_PrintString(window, spectator_next_text, -0.34f, 0.44f, 0.98f);
+    }
+    else if (g_GameState.status == GameStatus::Lost &&
+            g_SpectatorMode &&
+            g_SpectatorAutoRetryTimer >= 0.0f)
+    {
+        char spectator_retry_text[64];
+        snprintf(
+            spectator_retry_text,
+            sizeof(spectator_retry_text),
+            "SPECTATOR: tentando de novo em %.1fs",
+            g_SpectatorAutoRetryTimer
+        );
+        TextRendering_PrintString(window, spectator_retry_text, -0.38f, 0.44f, 0.98f);
+    }
 }
 
 
