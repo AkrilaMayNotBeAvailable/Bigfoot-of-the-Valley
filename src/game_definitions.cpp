@@ -64,7 +64,6 @@
 #include "camera.h"
 #include "player.h"
 #include "map_view.h"
-#include "data_preparation.h"
 
 // Estrutura que representa um modelo geométrico carregado a partir de um
 // arquivo ".obj". Veja https://en.wikipedia.org/wiki/Wavefront_.obj_file .

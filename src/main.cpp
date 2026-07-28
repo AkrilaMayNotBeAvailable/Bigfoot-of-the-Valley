@@ -44,7 +44,6 @@
 #include "player_model.h"
 #include "glfw_setup.h"
 #include "game_definitions.cpp"
-#include "data_preparation.h"
 
 
 //headers do jogo
