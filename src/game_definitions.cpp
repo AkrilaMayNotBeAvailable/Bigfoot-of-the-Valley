@@ -153,10 +153,10 @@ void LoadGameTextures();
 void ShotgunRecoilCounter(float delta_t);
 void TextDrawingChunk(GLFWwindow* window);
 void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t);
+void ShootingMechanic(bool shoot_button_pressed, glm::vec3 player_position);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
-
 
 // Declaração de funções utilizadas para pilha de matrizes de modelagem.
 void PushMatrix(glm::mat4 M);
@@ -4682,6 +4682,55 @@ void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t){
                 // boa parte do mapa sem deixá-lo eternamente "obcecado".
                 (void)collectibles_after;
             }
+        }
+    }
+}
+
+void ShootingMechanic(bool shoot_button_pressed, glm::vec3 player_position){
+    if (g_GameState.status == GameStatus::Playing &&
+        !IsBigfootCamActive() &&
+        shoot_button_pressed &&
+        !g_ShootButtonWasPressed &&
+        g_ShotgunRecoilTimer <= 0.0f)
+    {
+        float reload_mult = GetUpgradeValue(UpgradeId::ReloadSpeed);
+        if (reload_mult < 0.1f) reload_mult = 0.1f;
+        g_ShotgunCurrentRecoilDuration = g_Player.IsEnergyBoostActive()
+            ? SHOTGUN_RECOIL_DURATION * 0.5f / reload_mult
+            : SHOTGUN_RECOIL_DURATION / reload_mult;
+        g_ShotgunRecoilTimer = g_ShotgunCurrentRecoilDuration;
+        PlayGameSound(GameSound::Shotgun);
+
+        int hit_bigfoot_index = ShotHitsBigfoot(g_Camera.GetPosition(), g_Camera.GetViewVector());
+
+        if (hit_bigfoot_index >= 0)
+        {
+            printf("Acertou o Pe Grande!\n");
+
+            BigfootInstance& hit_bigfoot = g_Bigfoots[(size_t)hit_bigfoot_index];
+
+            hit_bigfoot.enemy.TakeDamage(
+                12.5f,
+                glm::vec3(player_position.x, player_position.y, player_position.z)
+            );
+
+            if (hit_bigfoot.enemy.IsDead())
+            {
+                hit_bigfoot.death_animation_started = true;
+                hit_bigfoot.death_timer = 0.0f;
+                PlayGameSound(GameSound::BigfootDies);
+
+                if (AreAllBigfootsDead())
+                    SetGameWon();
+            }
+            else
+            {
+                PlayRandomBigfootRoar();
+            }
+        }
+        else
+        {
+            printf("Errou o tiro.\n");
         }
     }
 }

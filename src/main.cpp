@@ -137,7 +137,7 @@ int main(int argc, char* argv[]){
             g_CameraBobAmount += (0.0f - g_CameraBobAmount) * 8.0f * delta_t;
         }
 
-        InGameUpdateMovementAndCollectibles(window, delta_t);
+        InGameUpdateMovementAndCollectibles(window, delta_t); // EXTRACTED FUNCTION
 
         glm::vec4 player_position = g_Camera.GetPosition();
         UpdatePlayerWalkIntensity(delta_t, player_position);
@@ -191,52 +191,7 @@ int main(int argc, char* argv[]){
             glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ||
             (g_SpectatorMode && ShouldSpectatorShoot() && g_ShotgunRecoilTimer <= 0.0f);
 
-        if (g_GameState.status == GameStatus::Playing &&
-            !IsBigfootCamActive() &&
-            shoot_button_pressed &&
-            !g_ShootButtonWasPressed &&
-            g_ShotgunRecoilTimer <= 0.0f)
-        {
-            float reload_mult = GetUpgradeValue(UpgradeId::ReloadSpeed);
-            if (reload_mult < 0.1f) reload_mult = 0.1f;
-            g_ShotgunCurrentRecoilDuration = g_Player.IsEnergyBoostActive()
-                ? SHOTGUN_RECOIL_DURATION * 0.5f / reload_mult
-                : SHOTGUN_RECOIL_DURATION / reload_mult;
-            g_ShotgunRecoilTimer = g_ShotgunCurrentRecoilDuration;
-            PlayGameSound(GameSound::Shotgun);
-
-            int hit_bigfoot_index = ShotHitsBigfoot(g_Camera.GetPosition(), g_Camera.GetViewVector());
-
-            if (hit_bigfoot_index >= 0)
-            {
-                printf("Acertou o Pe Grande!\n");
-
-                BigfootInstance& hit_bigfoot = g_Bigfoots[(size_t)hit_bigfoot_index];
-
-                hit_bigfoot.enemy.TakeDamage(
-                    12.5f,
-                    glm::vec3(player_position.x, player_position.y, player_position.z)
-                );
-
-                if (hit_bigfoot.enemy.IsDead())
-                {
-                    hit_bigfoot.death_animation_started = true;
-                    hit_bigfoot.death_timer = 0.0f;
-                    PlayGameSound(GameSound::BigfootDies);
-
-                    if (AreAllBigfootsDead())
-                        SetGameWon();
-                }
-                else
-                {
-                    PlayRandomBigfootRoar();
-                }
-            }
-            else
-            {
-                printf("Errou o tiro.\n");
-            }
-        }
+        ShootingMechanic(shoot_button_pressed, player_position); // EXTRACTED FUNCTION
 
         g_ShootButtonWasPressed = shoot_button_pressed;
 
