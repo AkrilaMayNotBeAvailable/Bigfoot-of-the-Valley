@@ -354,31 +354,7 @@ int main(int argc, char* argv[]){
         }
 
         // Esfera de debug da hitbox do Pé Grande.
-        // Usamos o mesmo raio que será usado para tiro/colisão.
-        if(g_DrawBigfootHitSphere){
-            std::vector<BoxObstacle> shot_boxes = GetBigfootShotBoxes();
-
-            glDisable(GL_CULL_FACE);
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-            for(const BigfootInstance& instance : g_Bigfoots){
-                glm::vec3 bigfoot_position = instance.enemy.GetPosition();
-
-                for(const BoxObstacle& shot_box : shot_boxes){
-                    model = Matrix_Translate(bigfoot_position.x, bigfoot_position.y, bigfoot_position.z)
-                        * Matrix_Rotate_Y(instance.render_yaw)
-                        * Matrix_Translate(shot_box.center.x, shot_box.center.y, shot_box.center.z)
-                        * Matrix_Scale(shot_box.size.x, shot_box.size.y, shot_box.size.z);
-
-                    glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-                    glUniform1i(g_object_id_uniform, SAFE_ZONE); // Reaproveita o verde do shader.
-                    DrawVirtualObject("the_cube");
-                }
-            }
-
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            glEnable(GL_CULL_FACE);
-        }
+        DrawHitBoxDebug(model, SAFE_ZONE);
 
         // Desenhamos os itens coletáveis.
         // Por enquanto usamos esferas pequenas como placeholder visual.
