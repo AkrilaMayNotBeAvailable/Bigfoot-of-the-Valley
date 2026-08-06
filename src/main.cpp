@@ -102,7 +102,7 @@ int main(int argc, char* argv[]){
         prev_time = current_time;
 
         //===================================================
-        // Update section:
+        // Begin: UPDATE section:
         //===================================================
         ShotgunRecoilCounter(delta_t); // EXTRACTED FUNCTION
         UpdateDeathAnimations(delta_t); // EXTRACTED FUNCTION
@@ -121,30 +121,14 @@ int main(int argc, char* argv[]){
         shoot_button_pressed = IsShootButtonPressed(window); // EXTRACTED FUNCTION
         ShootingMechanic(shoot_button_pressed, player_position); // EXTRACTED FUNCTION
         g_ShootButtonWasPressed = shoot_button_pressed;
+        //===================================================
+        // End: UPDATE Section;
+        //===================================================
 
-        // Aqui executamos as operações de renderização
-        // Drawing:
-        // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
-        // definida como coeficientes RGBA: Red, Green, Blue, Alpha; isto é:
-        // Vermelho, Verde, Azul, Alpha (valor de transparência).
-        // Conversaremos sobre sistemas de cores nas aulas de Modelos de Iluminação.
-        //
-        //           R     G     B     A
-#if DAY_MODE_DEBUG_ENABLED
-        if (g_DayMode)
-            glClearColor(0.53f, 0.75f, 0.92f, 1.0f); // céu de dia, azul claro
-        else
-#endif
-            glClearColor(0.015f, 0.018f, 0.026f, 1.0f);
-
-        // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
-        // e também resetamos todos os pixels do Z-buffer (depth buffer).
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // Pedimos para a GPU utilizar o programa de GPU criado acima (contendo
-        // os shaders de vértice e fragmentos).
-        glUseProgram(g_GpuProgramID);
-
+        //===================================================
+        // Begin: RENDERING section:
+        //===================================================
+        ClearColorBackground(); // EXTRACTED FUNCTION
 
         glm::vec4 camera_position_c  = g_Camera.GetPosition();
         glm::vec4 camera_view_vector = g_Camera.GetViewVector();
@@ -153,111 +137,9 @@ int main(int argc, char* argv[]){
         glm::mat4 view;
         glm::mat4 projection;
 
-#if MAP_VIEW_ENABLED
-        if (g_MapView.IsActive())
-        {
-            view       = g_MapView.GetViewMatrix();
-            projection = g_MapView.GetProjectionMatrix(screenRatio);
-        }
-        else
-#endif
-        {
-            // Computamos a matriz "View" utilizando os parâmetros da câmera para
-            // definir o sistema de coordenadas da câmera.  Veja slides 2-14, 184-190 e 236-242 do documento Aula_08_Sistemas_de_Coordenadas.pdf.
-            int bigfoot_cam_index = IsBigfootCamActive()
-                ? NearestLiveBigfootIndex(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z))
-                : -1;
-
-            if (IsBigfootCamActive() && bigfoot_cam_index >= 0){
-                // Câmera posicionada na cabeça do Pé Grande vivo mais próximo,
-                // olhando na direção em que ele anda. O jogador apenas observa
-                // (não controla o Pé Grande), então não aplicamos bob nem queda.
-                const BigfootInstance& bf = g_Bigfoots[(size_t)bigfoot_cam_index];
-                view = ComputeBigfootCamView(bf.enemy.GetPosition(), bf.render_yaw);
-            }
-            else{
-                view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
-
-                if (!g_PlayerFallAnimationStarted && g_CameraBobAmount > 0.001f)
-                {
-                    float vertical_bob = sin(g_CameraBobTimer) * 0.045f * g_CameraBobAmount;
-                    float roll_bob = sin(g_CameraBobTimer * 0.5f) * 0.018f * g_CameraBobAmount;
-
-                    view = Matrix_Rotate_Z(roll_bob)
-                        * Matrix_Translate(0.0f, vertical_bob, 0.0f)
-                        * view;
-                }
-
-                if(g_PlayerFallAnimationStarted){
-                    float fall = g_PlayerFallTimer / 1.10f;
-
-                    if (fall > 1.0f)
-                        fall = 1.0f;
-
-                    fall = fall * fall * (3.0f - 2.0f * fall);
-
-                    // O olho desce até perto do chão (de ~1.7 para ~0.30), como se o
-                    // jogador caísse, e só então aplicamos o tombamento para o lado.
-                    const float ground_eye_y = 0.55f;
-                    glm::vec4 fallen_position = camera_position_c;
-                    fallen_position.y = camera_position_c.y
-                        + (ground_eye_y - camera_position_c.y) * fall;
-
-                    view = Matrix_Camera_View(fallen_position, camera_view_vector, camera_up_vector);
-
-                    view = Matrix_Rotate_Z(1.35f * fall)
-                        * Matrix_Rotate_X(-0.65f * fall)
-                        * view;
-                }
-            }
-
-            // Agora computamos a matriz de Projeção.
-            // Note que, no sistema de coordenadas da câmera, os planos near e far
-            // estão no sentido negativo! Veja slides 176-204 do documento Aula_09_Projecoes.pdf.
-            float nearplane = -0.1f;  // Posição do "near plane"
-            float farplane  = -220.0f; // Posição do "far plane"
-
-            if(g_UsePerspectiveProjection){
-                // Projeção Perspectiva.
-                // Para definição do field of view (FOV), veja slides 205-215 do documento Aula_09_Projecoes.pdf.
-                float field_of_view = 3.141592 / 3.0f;
-                projection = Matrix_Perspective(field_of_view, screenRatio, nearplane, farplane);
-            } else {
-                // Projeção Ortográfica.
-                // Para definição dos valores l, r, b, t ("left", "right", "bottom", "top"),
-                // PARA PROJEÇÃO ORTOGRÁFICA veja slides 219-224 do documento Aula_09_Projecoes.pdf.
-                // Para simular um "zoom" ortográfico, computamos o valor de "t"
-                // utilizando a variável g_CameraDistance.
-                float t = 1.5f*g_CameraDistance/2.5f;
-                float b = -t;
-                float r = t*screenRatio;
-                float l = -r;
-                projection = Matrix_Orthographic(l, r, b, t, nearplane, farplane);
-            }
-        }
-
+        ComputeViewAndProjectionMatrices(view, projection, camera_position_c, camera_view_vector, camera_up_vector, screenRatio); // EXTRACTED FUNCTION
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
-
-        // Enviamos as matrizes "view" e "projection" para a placa de vídeo
-        // (GPU). Veja o arquivo "shader_vertex.glsl", onde estas são
-        // efetivamente aplicadas em todos os pontos.
-        glUniformMatrix4fv(g_view_uniform       , 1 , GL_FALSE , glm::value_ptr(view));
-        glUniformMatrix4fv(g_projection_uniform , 1 , GL_FALSE , glm::value_ptr(projection));
-#if MAP_VIEW_ENABLED
-        glUniform1i(g_map_view_uniform, g_MapView.IsActive() ? 1 : 0);
-#endif
-        // Liga o filtro de fúria da "Visão do Monstro" quando a câmera do Pé
-        // Grande está ativa; u_time alimenta as scanlines/grão e u_resolution
-        // permite a vinheta.
-        glUniform1i(g_monster_vision_uniform, IsBigfootCamActive() ? 1 : 0);
-        glUniform1f(g_time_uniform, current_time);
-        {
-            int fb_w, fb_h;
-            glfwGetFramebufferSize(window, &fb_w, &fb_h);
-            glUniform2f(g_resolution_uniform, (float)fb_w, (float)fb_h);
-        }
-
-        
+        UpdateShaderUniforms(window, view, projection, current_time); // EXTRACTED FUNCTION
 
         // Atualiza os uniforms de iluminação por postes de luz a cada frame,
         // selecionando as luzes/oclusores mais próximos do player.
