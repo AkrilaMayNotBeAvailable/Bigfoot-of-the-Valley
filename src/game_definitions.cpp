@@ -157,6 +157,7 @@ void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position);
 void ShowCoordinates(GLFWwindow* window);
 void CheckWinConditions(glm::vec4 player_position);
 void CheckLoseConditions(bool bigfoot_attacking);
+void RenderPlayerView(glm::vec4 camera_view_vector, glm::vec4 camera_position_c, glm::vec4 camera_up_vector, float current_time);
 //================= Drawing
 void DrawAdrenalineBoostFilter(GLFWwindow* window);
 void DrawHitBoxDebug(glm::mat4 model, int SAFE_ZONE);
@@ -4860,6 +4861,38 @@ void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed
         running_key_pressed = true;
     } else {
         running_key_pressed = false;
+    }
+}
+
+void RenderPlayerView(glm::vec4 camera_view_vector, glm::vec4 camera_position_c, glm::vec4 camera_up_vector, float current_time){
+    // Imprimimos na tela os ângulos de Euler que controlam a rotação do
+    // terceiro cubo.
+    if (g_GameState.status != GameStatus::MainMenu &&
+        g_GameState.status != GameStatus::UpgradeShop &&
+        g_GameState.status != GameStatus::ConfirmReset
+#if MAP_VIEW_ENABLED
+        && !g_MapView.IsActive()
+#endif
+        )
+    {
+        if (IsBigfootCamActive()){
+            // No Modo Monstro vemos o jogador de fora (pela cabeça do Pé
+            // Grande), então desenhamos o corpo do caçador na posição dele
+            // em vez do viewmodel de arma em primeira pessoa.
+            float player_yaw = atan2(camera_view_vector.x, camera_view_vector.z);
+            glm::vec3 player_feet = glm::vec3(
+                camera_position_c.x,
+                camera_position_c.y - 1.7f,
+                camera_position_c.z
+            );
+            DrawPlayerModel(player_feet, player_yaw, current_time, g_PlayerWalkIntensity,
+                g_ShotgunRecoilTimer, g_ShotgunCurrentRecoilDuration);
+        }
+        else if (!g_PlayerFallAnimationStarted)
+        {
+            // Ao morrer (animação de queda), a arma some junto com o jogador.
+            DrawFirstPersonWeapon(camera_position_c, camera_view_vector, camera_up_vector, g_ShotgunRecoilTimer, g_ShotgunCurrentRecoilDuration);
+        }
     }
 }
 

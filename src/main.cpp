@@ -108,7 +108,7 @@ int main(int argc, char* argv[]){
         UpdateBigfootCamRequest(window, delta_t); // EXTRACTED FUNCTION
         MovementAndRunningInputCheck(window, movement_key_pressed, running_key_pressed); // EXTRACTED FUNTION
 
-        if (g_GameState.status == GameStatus::Playing && movement_key_pressed){
+        if(g_GameState.status == GameStatus::Playing && movement_key_pressed){
             g_CameraBobTimer += delta_t * (running_key_pressed ? 11.5f : 7.2f);
 
             float target_bob = running_key_pressed ? 1.0f : 0.45f;
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]){
         InGameUpdateMovementAndCollectibles(window, delta_t); // EXTRACTED FUNCTION
 
         glm::vec4 player_position = g_Camera.GetPosition();
-        UpdatePlayerWalkIntensity(delta_t, player_position);
+        UpdatePlayerWalkIntensity(delta_t, player_position); // EXTRACTED FUNCTION
 
         if (g_GameState.status == GameStatus::Playing
 #if MAP_VIEW_ENABLED
@@ -356,37 +356,7 @@ int main(int argc, char* argv[]){
         }
 #endif
 
-        // Imprimimos na tela os ângulos de Euler que controlam a rotação do
-        // terceiro cubo.
-        if (g_GameState.status != GameStatus::MainMenu &&
-            g_GameState.status != GameStatus::UpgradeShop &&
-            g_GameState.status != GameStatus::ConfirmReset
-#if MAP_VIEW_ENABLED
-            && !g_MapView.IsActive()
-#endif
-           )
-        {
-            if (IsBigfootCamActive())
-            {
-                // No Modo Monstro vemos o jogador de fora (pela cabeça do Pé
-                // Grande), então desenhamos o corpo do caçador na posição dele
-                // em vez do viewmodel de arma em primeira pessoa.
-                float player_yaw = atan2(camera_view_vector.x, camera_view_vector.z);
-                glm::vec3 player_feet = glm::vec3(
-                    camera_position_c.x,
-                    camera_position_c.y - 1.7f,
-                    camera_position_c.z
-                );
-                DrawPlayerModel(player_feet, player_yaw, current_time, g_PlayerWalkIntensity,
-                    g_ShotgunRecoilTimer, g_ShotgunCurrentRecoilDuration);
-            }
-            else if (!g_PlayerFallAnimationStarted)
-            {
-                // Ao morrer (animação de queda), a arma some junto com o jogador.
-                DrawFirstPersonWeapon(camera_position_c, camera_view_vector, camera_up_vector, g_ShotgunRecoilTimer, g_ShotgunCurrentRecoilDuration);
-            }
-        }
-
+        RenderPlayerView(camera_view_vector, camera_position_c, camera_up_vector, current_time); // EXTRACTED FUNTION
         DrawAdrenalineBoostFilter(window); // EXTRACTED FUNTION
 
         // (O antigo tint vermelho 2D do Modo Monstro foi substituído pelo filtro
