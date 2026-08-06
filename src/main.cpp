@@ -90,10 +90,18 @@ int main(int argc, char* argv[]){
 
     GLFWSetup(); // EXTRACTED FUNCTION
 
+    // Variables removed from main loop:
     bool movement_key_pressed = false; // MOVED OUTSIDE LOOP
     bool running_key_pressed = false; // MOVED OUTSIDE LOOP
     bool shoot_button_pressed = false; // MOVED OUTSIDE LOOP
     bool bigfoot_attacking = false; // MOVED OUTSIDE LOOP
+
+    glm::vec4 camera_position_c;
+    glm::vec4 camera_view_vector;
+    glm::vec4 camera_up_vector;
+
+    glm::mat4 view;
+    glm::mat4 projection;
 
     float prev_time = (float)glfwGetTime();
     while(!glfwWindowShouldClose(window)){
@@ -130,26 +138,17 @@ int main(int argc, char* argv[]){
         //===================================================
         ClearColorBackground(); // EXTRACTED FUNCTION
 
-        glm::vec4 camera_position_c  = g_Camera.GetPosition();
-        glm::vec4 camera_view_vector = g_Camera.GetViewVector();
-        glm::vec4 camera_up_vector   = g_Camera.GetUpVector();
-
-        glm::mat4 view;
-        glm::mat4 projection;
+        camera_position_c  = g_Camera.GetPosition();
+        camera_view_vector = g_Camera.GetViewVector();
+        camera_up_vector   = g_Camera.GetUpVector();
 
         ComputeViewAndProjectionMatrices(view, projection, camera_position_c, camera_view_vector, camera_up_vector, screenRatio); // EXTRACTED FUNCTION
         glm::mat4 model = Matrix_Identity(); // Transformação identidade de modelagem
         UpdateShaderUniforms(window, view, projection, current_time); // EXTRACTED FUNCTION
 
-        // Atualiza os uniforms de iluminação por postes de luz a cada frame,
-        // selecionando as luzes/oclusores mais próximos do player.
         UpdateLightingUniforms(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z));
         DrawCampusMap();
 
-        // Desenhamos os blocos retangulares do cenário.
-        // A mesma lista será usada depois para colisão.
-        // Desenhamos o Pé Grande como placeholder.
-        // A funcao abaixo substitui o modelo do coelho do template.
         glm::vec3 map_bigfoot_position = glm::vec3(0.0f, 0.0f, 0.0f);
         float map_bigfoot_yaw = 0.0f;
         bool has_map_bigfoot = false;

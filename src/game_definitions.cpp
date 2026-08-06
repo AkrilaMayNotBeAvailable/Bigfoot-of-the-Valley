@@ -4964,13 +4964,11 @@ void UpdateDeathAnimations(float delta_t){
 
 bool IsAnyBigfootAttacking(){
     for(const BigfootInstance& instance : g_Bigfoots){
-        if (instance.enemy.GetState() == BigfootState::Attacking){
-            break;
-        } else {
-            return false;
+        if(instance.enemy.GetState() == BigfootState::Attacking){
+            return true;
         }
     }
-    return true;
+    return false;
 }
 
 void UpdateCameraBob(float delta_t, bool movement_key_pressed, bool running_key_pressed){
