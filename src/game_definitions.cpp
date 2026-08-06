@@ -161,6 +161,8 @@ void CheckLoseConditions(bool bigfoot_attacking);
 void DrawAdrenalineBoostFilter(GLFWwindow* window);
 void DrawHitBoxDebug(glm::mat4 model, int SAFE_ZONE);
 void DrawCollectibles(std::vector<Collectible> collectibles, float current_time, glm::mat4 model);
+//================= Input Handling
+void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed, bool& running_key_pressed);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4837,6 +4839,27 @@ void DrawCollectibles(std::vector<Collectible> collectibles, float current_time,
         glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
         glUniform1i(g_object_id_uniform, OBJECT_MONSTER_DRINK);
         DrawVirtualObject("pCylinder2");
+    }
+}
+
+void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed, bool& running_key_pressed){
+    if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ||
+        (g_SpectatorMode &&
+            (GetSpectatorMovementDirection().x != 0.0f || GetSpectatorMovementDirection().z != 0.0f))){
+        movement_key_pressed = true;
+    } else {
+        movement_key_pressed = false;
+    }
+
+    if(glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+        glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS ||
+        (g_SpectatorMode && IsSpectatorRunning())){
+        running_key_pressed = true;
+    } else {
+        running_key_pressed = false;
     }
 }
 

@@ -51,10 +51,6 @@
 #include "map_view.h"
 
 int main(int argc, char* argv[]){
-    // Inicializamos a biblioteca GLFW, utilizada para criar uma janela do
-    // sistema operacional, onde poderemos renderizar com OpenGL.
-    // Criamos uma janela do sistema operacional, com 1280 colunas e 720 linhas
-    // de pixels, e com título "INF01047 ...".
     GLFWwindow* window;
     // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
     float screenRatio = 1.0f;
@@ -70,7 +66,6 @@ int main(int argc, char* argv[]){
     glfwSetScrollCallback(window, ScrollCallback);
     //==================================================
     PrintInfoGPU(); // EXTRACTED FUNCTION
-
     // Carregamos os shaders de vértices e de fragmentos que serão utilizados
     // para renderização. Veja slides 180-200 do documento Aula_03_Rendering_Pipeline_Grafico.pdf.
     LoadShadersFromFiles();
@@ -89,6 +84,9 @@ int main(int argc, char* argv[]){
 
     GLFWSetup(); // EXTRACTED FUNCTION
 
+    bool movement_key_pressed = false; // MOVED OUTSIDE LOOP
+    bool running_key_pressed = false; // MOVED OUTSIDE LOOP
+
     float prev_time = (float)glfwGetTime();
     while(!glfwWindowShouldClose(window)){
         float current_time = (float)glfwGetTime();
@@ -106,21 +104,9 @@ int main(int argc, char* argv[]){
             g_PlayerFallTimer += delta_t;
 
         SpectatorMechanic(delta_t); // EXTRACTED FUNCTION
-        UpdateSpectatorController(delta_t);
+        UpdateSpectatorController(delta_t); // EXTRACTED FUNCTION
         UpdateBigfootCamRequest(window, delta_t); // EXTRACTED FUNCTION
-
-        bool movement_key_pressed =
-            glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS ||
-            (g_SpectatorMode &&
-             (GetSpectatorMovementDirection().x != 0.0f || GetSpectatorMovementDirection().z != 0.0f));
-
-        bool running_key_pressed =
-            glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-            glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS ||
-            (g_SpectatorMode && IsSpectatorRunning());
+        MovementAndRunningInputCheck(window, movement_key_pressed, running_key_pressed); // EXTRACTED FUNTION
 
         if (g_GameState.status == GameStatus::Playing && movement_key_pressed){
             g_CameraBobTimer += delta_t * (running_key_pressed ? 11.5f : 7.2f);
