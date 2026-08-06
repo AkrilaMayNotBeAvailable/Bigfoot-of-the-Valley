@@ -154,6 +154,7 @@ void ShotgunRecoilCounter(float delta_t);
 void TextDrawingChunk(GLFWwindow* window);
 void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t);
 void ShootingMechanic(bool shoot_button_pressed, glm::vec3 player_position);
+void ShowCoordinates(GLFWwindow* window);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4733,6 +4734,22 @@ void ShootingMechanic(bool shoot_button_pressed, glm::vec3 player_position){
             printf("Errou o tiro.\n");
         }
     }
+}
+
+void ShowCoordinates(GLFWwindow* window){
+#if SHOW_COORDS_DEBUG_ENABLED
+    if (g_ShowCoordsDebug)
+    {
+        glm::vec4 dbg_pos = g_Camera.GetPosition();
+        char coords_buf[64];
+        int coords_chars = snprintf(coords_buf, sizeof(coords_buf),
+            "X=%.2f Y=%.2f Z=%.2f", dbg_pos.x, dbg_pos.y, dbg_pos.z);
+        float lh = TextRendering_LineHeight(window);
+        float cw = TextRendering_CharWidth(window);
+        TextRendering_PrintString(window, coords_buf,
+            1.0f - (coords_chars + 1) * cw, 1.0f - 2.0f * lh, 1.0f);
+    }
+#endif
 }
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null

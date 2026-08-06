@@ -186,13 +186,11 @@ int main(int argc, char* argv[]){
             SetGameWon();
         }
 
-        // Tiro com o botão esquerdo do mouse.
+        // Mecânica de tiro:
         bool shoot_button_pressed =
             glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ||
             (g_SpectatorMode && ShouldSpectatorShoot() && g_ShotgunRecoilTimer <= 0.0f);
-
         ShootingMechanic(shoot_button_pressed, player_position); // EXTRACTED FUNCTION
-
         g_ShootButtonWasPressed = shoot_button_pressed;
 
         // Aqui executamos as operações de renderização
@@ -486,19 +484,7 @@ int main(int argc, char* argv[]){
         // por segundo (frames per second).
         TextRendering_ShowFramesPerSecond(window);
 
-#if SHOW_COORDS_DEBUG_ENABLED
-        if (g_ShowCoordsDebug)
-        {
-            glm::vec4 dbg_pos = g_Camera.GetPosition();
-            char coords_buf[64];
-            int coords_chars = snprintf(coords_buf, sizeof(coords_buf),
-                "X=%.2f Y=%.2f Z=%.2f", dbg_pos.x, dbg_pos.y, dbg_pos.z);
-            float lh = TextRendering_LineHeight(window);
-            float cw = TextRendering_CharWidth(window);
-            TextRendering_PrintString(window, coords_buf,
-                1.0f - (coords_chars + 1) * cw, 1.0f - 2.0f * lh, 1.0f);
-        }
-#endif
+        ShowCoordinates(window);
         DrawMainMenu(window);
         TextDrawingChunk(window);
 
