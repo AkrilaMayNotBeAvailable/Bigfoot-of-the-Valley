@@ -309,7 +309,6 @@ int main(int argc, char* argv[]){
 
         DrawCampusMap();
 
-
         // Desenhamos os blocos retangulares do cenário.
         // A mesma lista será usada depois para colisão.
         // Desenhamos o Pé Grande como placeholder.
@@ -317,21 +316,7 @@ int main(int argc, char* argv[]){
         glm::vec3 map_bigfoot_position = glm::vec3(0.0f, 0.0f, 0.0f);
         float map_bigfoot_yaw = 0.0f;
         bool has_map_bigfoot = false;
-
-        for(size_t i = 0; i < g_Bigfoots.size(); ++i){
-            BigfootInstance& instance = g_Bigfoots[i];
-            glm::vec3 bigfoot_position = instance.enemy.GetPosition();
-            float bigfoot_yaw = UpdateBigfootFacing(i, bigfoot_position, delta_t);
-            float bigfoot_death_progress = instance.death_animation_started ? instance.death_timer / 1.15f : 0.0f;
-
-            DrawBigfootModel(bigfoot_position, bigfoot_yaw, current_time, bigfoot_death_progress, instance.movement_intensity);
-
-            if(!has_map_bigfoot && !instance.enemy.IsDead()){
-                map_bigfoot_position = bigfoot_position;
-                map_bigfoot_yaw = bigfoot_yaw;
-                has_map_bigfoot = true;
-            }
-        }
+        DrawBigfoots(has_map_bigfoot, current_time, delta_t, map_bigfoot_position, map_bigfoot_yaw); // EXTRACTED FUNTION
 
         // Esfera de debug da hitbox do Pé Grande.
         DrawHitBoxDebug(model, SAFE_ZONE); // EXTRACTED FUNTION
@@ -341,13 +326,8 @@ int main(int argc, char* argv[]){
         std::vector<Collectible>& collectibles = GetSceneCollectibles();
         DrawCollectibles(collectibles, current_time, model); // EXTRACTED FUNTION
         
-
         // Desenhamos a zona segura/final somente depois que todos os itens forem coletados.
-        if(AllCollectiblesCollected()){
-            const SafeZone& safe_zone = GetSafeZone();
-
-            DrawSafeZoneBeacon(safe_zone, current_time);
-        }
+        DrawSafeZone(current_time); // EXTRACTED FUNTION
 
 #if MAP_VIEW_ENABLED
         if (g_MapView.IsActive())
@@ -358,17 +338,7 @@ int main(int argc, char* argv[]){
 
         RenderPlayerView(camera_view_vector, camera_position_c, camera_up_vector, current_time); // EXTRACTED FUNTION
         DrawAdrenalineBoostFilter(window); // EXTRACTED FUNTION
-
-        // (O antigo tint vermelho 2D do Modo Monstro foi substituído pelo filtro
-        // térmico/infravermelho aplicado por fragmento em shader_fragment.glsl,
-        // via uniform u_monster_vision_active.)
-        // TextRendering_ShowEulerAngles(window);
-        // Imprimimos na informação sobre a matriz de projeção sendo utilizada.
-        // TextRendering_ShowProjection(window);
-        // Imprimimos na tela informação sobre o número de quadros renderizados
-        // por segundo (frames per second).
-        TextRendering_ShowFramesPerSecond(window);
-
+        TextRendering_ShowFramesPerSecond(window); // EXTRACTED FUNTION
         ShowCoordinates(window); // EXTRACTED FUNCTION
         DrawMainMenu(window); // EXTRACTED FUNCTION
         TextDrawingChunk(window); // EXTRACTED FUNCTION

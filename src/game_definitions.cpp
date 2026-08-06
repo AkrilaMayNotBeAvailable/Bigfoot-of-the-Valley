@@ -162,6 +162,8 @@ void RenderPlayerView(glm::vec4 camera_view_vector, glm::vec4 camera_position_c,
 void DrawAdrenalineBoostFilter(GLFWwindow* window);
 void DrawHitBoxDebug(glm::mat4 model, int SAFE_ZONE);
 void DrawCollectibles(std::vector<Collectible> collectibles, float current_time, glm::mat4 model);
+void DrawSafeZone(float current_time);
+void DrawBigfoots(bool has_map_bigfoot, float current_time, float delta_t, glm::vec3 map_bigfoot_position, float map_bigfoot_yaw);
 //================= Input Handling
 void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed, bool& running_key_pressed);
 //===================================================================
@@ -4843,6 +4845,14 @@ void DrawCollectibles(std::vector<Collectible> collectibles, float current_time,
     }
 }
 
+void DrawSafeZone(float current_time){
+    if(AllCollectiblesCollected()){
+        const SafeZone& safe_zone = GetSafeZone();
+
+        DrawSafeZoneBeacon(safe_zone, current_time);
+    }
+}
+
 void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed, bool& running_key_pressed){
     if(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS ||
         glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
@@ -4892,6 +4902,23 @@ void RenderPlayerView(glm::vec4 camera_view_vector, glm::vec4 camera_position_c,
         {
             // Ao morrer (animação de queda), a arma some junto com o jogador.
             DrawFirstPersonWeapon(camera_position_c, camera_view_vector, camera_up_vector, g_ShotgunRecoilTimer, g_ShotgunCurrentRecoilDuration);
+        }
+    }
+}
+
+void DrawBigfoots(bool has_map_bigfoot, float current_time, float delta_t, glm::vec3 map_bigfoot_position, float map_bigfoot_yaw){
+    for(size_t i = 0; i < g_Bigfoots.size(); ++i){
+        BigfootInstance& instance = g_Bigfoots[i];
+        glm::vec3 bigfoot_position = instance.enemy.GetPosition();
+        float bigfoot_yaw = UpdateBigfootFacing(i, bigfoot_position, delta_t);
+        float bigfoot_death_progress = instance.death_animation_started ? instance.death_timer / 1.15f : 0.0f;
+
+        DrawBigfootModel(bigfoot_position, bigfoot_yaw, current_time, bigfoot_death_progress, instance.movement_intensity);
+
+        if(!has_map_bigfoot && !instance.enemy.IsDead()){
+            map_bigfoot_position = bigfoot_position;
+            map_bigfoot_yaw = bigfoot_yaw;
+            has_map_bigfoot = true;
         }
     }
 }
