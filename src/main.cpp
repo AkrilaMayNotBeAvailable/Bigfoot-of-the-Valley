@@ -168,6 +168,7 @@ int main(int argc, char* argv[]){
                 break;
             }
         }
+        
         // Verificação de derrota ; Player died to bigfoot
         CheckLoseConditions(bigfoot_attacking); // EXTRACTED FUNCTION
         // Verificação de vitória ; Kill all bigfoot or escape Valley
@@ -354,27 +355,13 @@ int main(int argc, char* argv[]){
         }
 
         // Esfera de debug da hitbox do Pé Grande.
-        DrawHitBoxDebug(model, SAFE_ZONE);
+        DrawHitBoxDebug(model, SAFE_ZONE); // EXTRACTED FUNTION
 
         // Desenhamos os itens coletáveis.
         // Por enquanto usamos esferas pequenas como placeholder visual.
         std::vector<Collectible>& collectibles = GetSceneCollectibles();
-
-        for(const Collectible& collectible : collectibles){
-            if(collectible.collected)
-                continue;
-
-            float bob = 0.18f * sin(current_time * 2.4f + collectible.center.x * 0.37f);
-
-            model = Matrix_Translate(collectible.center.x, 0.18f + bob, collectible.center.z)
-                * Matrix_Rotate_Y(current_time * 1.9f)
-                * Matrix_Rotate_Z(0.22f)
-                * Matrix_Scale(0.34f, 0.34f, 0.34f);
-
-            glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
-            glUniform1i(g_object_id_uniform, OBJECT_MONSTER_DRINK);
-            DrawVirtualObject("pCylinder2");
-        }
+        DrawCollectibles(collectibles, current_time, model); // EXTRACTED FUNTION
+        
 
         // Desenhamos a zona segura/final somente depois que todos os itens forem coletados.
         if(AllCollectiblesCollected()){

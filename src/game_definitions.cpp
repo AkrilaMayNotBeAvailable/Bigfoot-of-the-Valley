@@ -157,8 +157,10 @@ void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position);
 void ShowCoordinates(GLFWwindow* window);
 void CheckWinConditions(glm::vec4 player_position);
 void CheckLoseConditions(bool bigfoot_attacking);
+//================= Drawing
 void DrawAdrenalineBoostFilter(GLFWwindow* window);
 void DrawHitBoxDebug(glm::mat4 model, int SAFE_ZONE);
+void DrawCollectibles(std::vector<Collectible> collectibles, float current_time, glm::mat4 model);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4817,6 +4819,24 @@ void DrawHitBoxDebug(glm::mat4 model, int SAFE_ZONE){
 
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         glEnable(GL_CULL_FACE);
+    }
+}
+
+void DrawCollectibles(std::vector<Collectible> collectibles, float current_time, glm::mat4 model){
+    for(const Collectible& collectible : collectibles){
+        if(collectible.collected)
+            continue;
+
+        float bob = 0.18f * sin(current_time * 2.4f + collectible.center.x * 0.37f);
+
+        model = Matrix_Translate(collectible.center.x, 0.18f + bob, collectible.center.z)
+            * Matrix_Rotate_Y(current_time * 1.9f)
+            * Matrix_Rotate_Z(0.22f)
+            * Matrix_Scale(0.34f, 0.34f, 0.34f);
+
+        glUniformMatrix4fv(g_model_uniform, 1, GL_FALSE, glm::value_ptr(model));
+        glUniform1i(g_object_id_uniform, OBJECT_MONSTER_DRINK);
+        DrawVirtualObject("pCylinder2");
     }
 }
 
