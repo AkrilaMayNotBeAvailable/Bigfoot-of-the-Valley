@@ -152,6 +152,7 @@ void UpdateBigfootCamRequest(GLFWwindow* window, float delta_t);
 void LoadGameTextures();
 void ShotgunRecoilCounter(float delta_t);
 void TextDrawingChunk(GLFWwindow* window);
+void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4066,8 +4067,7 @@ void BuildTrianglesAndAddToVirtualScene(ObjModel* model){
 // Função para debugging: imprime no terminal todas informações de um modelo
 // geométrico carregado de um arquivo ".obj".
 // Veja: https://github.com/syoyo/tinyobjloader/blob/22883def8db9ef1f3ffb9b404318e7dd25fdbb51/loader_example.cc#L98
-void PrintObjModelInfo(ObjModel* model)
-{
+void PrintObjModelInfo(ObjModel* model){
   const tinyobj::attrib_t                & attrib    = model->attrib;
   const std::vector<tinyobj::shape_t>    & shapes    = model->shapes;
   const std::vector<tinyobj::material_t> & materials = model->materials;
@@ -4649,6 +4649,40 @@ void TextDrawingChunk(GLFWwindow* window){
 if (!g_MapView.IsActive())
 #endif
         TextRendering_PrintString(window,"x",-0.01f,0.0f,1.5f);
+    }
+}
+
+void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t){
+    // Extraction method
+    if (g_GameState.status == GameStatus::Playing
+#if MAP_VIEW_ENABLED
+            && !g_MapView.IsActive()
+#endif
+        )
+    {
+        // Snapshot do estado dos coletáveis para detectar pickups e alertar
+        // o Pé Grande para a posição onde o jogador "fez barulho".
+        std::vector<Collectible>& collectibles_before = GetSceneCollectibles();
+        std::vector<bool> was_collected;
+        was_collected.reserve(collectibles_before.size());
+        for (const Collectible& c : collectibles_before)
+            was_collected.push_back(c.collected);
+
+        // No Modo Monstro o jogador continua podendo andar com WASD (apenas
+        // não atira); o corpo do caçador anima as pernas conforme se move.
+        if (g_SpectatorMode)
+            g_Player.UpdateAutonomous(GetSpectatorMovementDirection(), IsSpectatorRunning(), delta_t);
+        else
+            g_Player.Update(window, delta_t);
+
+        const std::vector<Collectible>& collectibles_after = GetSceneCollectibles();
+        for(size_t i = 0; i < collectibles_after.size() && i < was_collected.size(); ++i){
+            if(!was_collected[i] && collectibles_after[i].collected){
+                // 10 segundos cobrem ~45m a velocidade de ronda — atravessa
+                // boa parte do mapa sem deixá-lo eternamente "obcecado".
+                (void)collectibles_after;
+            }
+        }
     }
 }
 

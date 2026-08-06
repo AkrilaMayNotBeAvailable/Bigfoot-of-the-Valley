@@ -127,50 +127,17 @@ int main(int argc, char* argv[]){
             glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS ||
             (g_SpectatorMode && IsSpectatorRunning());
 
-        if (g_GameState.status == GameStatus::Playing && movement_key_pressed)
-        {
+        if (g_GameState.status == GameStatus::Playing && movement_key_pressed){
             g_CameraBobTimer += delta_t * (running_key_pressed ? 11.5f : 7.2f);
 
             float target_bob = running_key_pressed ? 1.0f : 0.45f;
             g_CameraBobAmount += (target_bob - g_CameraBobAmount) * 8.0f * delta_t;
         }
-        else
-        {
+        else{
             g_CameraBobAmount += (0.0f - g_CameraBobAmount) * 8.0f * delta_t;
         }
 
-        if (g_GameState.status == GameStatus::Playing
-#if MAP_VIEW_ENABLED
-            && !g_MapView.IsActive()
-#endif
-           )
-        {
-            // Snapshot do estado dos coletáveis para detectar pickups e alertar
-            // o Pé Grande para a posição onde o jogador "fez barulho".
-            std::vector<Collectible>& collectibles_before = GetSceneCollectibles();
-            std::vector<bool> was_collected;
-            was_collected.reserve(collectibles_before.size());
-            for (const Collectible& c : collectibles_before)
-                was_collected.push_back(c.collected);
-
-            // No Modo Monstro o jogador continua podendo andar com WASD (apenas
-            // não atira); o corpo do caçador anima as pernas conforme se move.
-            if (g_SpectatorMode)
-                g_Player.UpdateAutonomous(GetSpectatorMovementDirection(), IsSpectatorRunning(), delta_t);
-            else
-                g_Player.Update(window, delta_t);
-
-            const std::vector<Collectible>& collectibles_after = GetSceneCollectibles();
-            for (size_t i = 0; i < collectibles_after.size() && i < was_collected.size(); ++i)
-            {
-                if (!was_collected[i] && collectibles_after[i].collected)
-                {
-                    // 10 segundos cobrem ~45m a velocidade de ronda — atravessa
-                    // boa parte do mapa sem deixá-lo eternamente "obcecado".
-                    (void)collectibles_after;
-                }
-            }
-        }
+        InGameUpdateMovementAndCollectibles(window, delta_t);
 
         glm::vec4 player_position = g_Camera.GetPosition();
         UpdatePlayerWalkIntensity(delta_t, player_position);
@@ -195,17 +162,14 @@ int main(int argc, char* argv[]){
 
         bool bigfoot_attacking = false;
 
-        for (const BigfootInstance& instance : g_Bigfoots)
-        {
-            if (instance.enemy.GetState() == BigfootState::Attacking)
-            {
+        for(const BigfootInstance& instance : g_Bigfoots){
+            if (instance.enemy.GetState() == BigfootState::Attacking){
                 bigfoot_attacking = true;
                 break;
             }
         }
 
-        if (g_GameState.status == GameStatus::Playing && bigfoot_attacking)
-        {
+        if(g_GameState.status == GameStatus::Playing && bigfoot_attacking){
             PlayGameSound(GameSound::BigfootKillsPlayer);
             g_PlayerFallAnimationStarted = true;
             g_PlayerFallTimer = 0.0f;
@@ -481,7 +445,7 @@ int main(int argc, char* argv[]){
         std::vector<Collectible>& collectibles = GetSceneCollectibles();
 
         for(const Collectible& collectible : collectibles){
-            if (collectible.collected)
+            if(collectible.collected)
                 continue;
 
             float bob = 0.18f * sin(current_time * 2.4f + collectible.center.x * 0.37f);
@@ -592,4 +556,3 @@ int main(int argc, char* argv[]){
 
     return 0;
 }
-
