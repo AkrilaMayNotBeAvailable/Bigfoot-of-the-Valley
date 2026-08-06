@@ -157,6 +157,7 @@ void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position);
 void ShowCoordinates(GLFWwindow* window);
 void CheckWinConditions(glm::vec4 player_position);
 void CheckLoseConditions(bool bigfoot_attacking);
+void DrawAdrenalineBoostFilter(GLFWwindow* window);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -238,8 +239,6 @@ std::map<std::string, SceneObject> g_VirtualScene;
 
 // Pilha que guardará as matrizes de modelagem.
 std::stack<glm::mat4>  g_MatrixStack;
-
-
 
 // Ângulos de Euler que controlam a rotação de um dos cubos da cena virtual
 float g_AngleX = 0.0f;
@@ -4772,6 +4771,24 @@ void CheckLoseConditions(bool bigfoot_attacking){
 
         if (g_SpectatorMode)
             g_SpectatorAutoRetryTimer = 2.0f;
+    }
+}
+
+void DrawAdrenalineBoostFilter(GLFWwindow* window){
+    // Filtro esverdeado de "adrenalina" enquanto o energy boost estiver ativo.
+    if(g_GameState.status == GameStatus::Playing && g_Player.IsEnergyBoostActive())
+    {
+        int fb_w, fb_h;
+        glfwGetFramebufferSize(window, &fb_w, &fb_h);
+
+        float remaining = g_Player.GetEnergyBoostTimeRemaining();
+        float fade_out  = g_Player.IsInfiniteBoostCheatActive()
+            ? 1.0f
+            : (remaining < 0.6f ? remaining / 0.6f : 1.0f);
+        float pulse     = 0.5f + 0.5f * sin((float)glfwGetTime() * 4.5f);
+        float alpha     = (0.12f + 0.05f * pulse) * fade_out;
+
+        TextRendering_DrawRectPx(window, 0, 0, fb_w, fb_h, 0.20f, 1.00f, 0.35f, alpha);
     }
 }
 

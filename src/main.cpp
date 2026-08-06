@@ -445,21 +445,7 @@ int main(int argc, char* argv[]){
             }
         }
 
-        // Filtro esverdeado de "adrenalina" enquanto o energy boost estiver ativo.
-        if (g_GameState.status == GameStatus::Playing && g_Player.IsEnergyBoostActive())
-        {
-            int fb_w, fb_h;
-            glfwGetFramebufferSize(window, &fb_w, &fb_h);
-
-            float remaining = g_Player.GetEnergyBoostTimeRemaining();
-            float fade_out  = g_Player.IsInfiniteBoostCheatActive()
-                ? 1.0f
-                : (remaining < 0.6f ? remaining / 0.6f : 1.0f);
-            float pulse     = 0.5f + 0.5f * sin((float)glfwGetTime() * 4.5f);
-            float alpha     = (0.12f + 0.05f * pulse) * fade_out;
-
-            TextRendering_DrawRectPx(window, 0, 0, fb_w, fb_h, 0.20f, 1.00f, 0.35f, alpha);
-        }
+        DrawAdrenalineBoostFilter(window); // EXTRACTED FUNTION
 
         // (O antigo tint vermelho 2D do Modo Monstro foi substituído pelo filtro
         // térmico/infravermelho aplicado por fragmento em shader_fragment.glsl,
