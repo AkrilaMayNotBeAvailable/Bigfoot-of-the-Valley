@@ -170,6 +170,7 @@ void DrawSafeZone(float current_time);
 void DrawBigfoots(bool has_map_bigfoot, float current_time, float delta_t, glm::vec3 map_bigfoot_position, float map_bigfoot_yaw);
 //================= Input Handling
 void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed, bool& running_key_pressed);
+bool IsShootButtonPressed(GLFWwindow* window);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4977,6 +4978,15 @@ void UpdateCameraBob(float delta_t, bool movement_key_pressed, bool running_key_
     }
     else{
         g_CameraBobAmount += (0.0f - g_CameraBobAmount) * 8.0f * delta_t;
+    }
+}
+
+bool IsShootButtonPressed(GLFWwindow* window){
+    if(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ||
+            (g_SpectatorMode && ShouldSpectatorShoot() && g_ShotgunRecoilTimer <= 0.0f)){
+        return true;
+    } else {
+        return false;
     }
 }
 

@@ -50,6 +50,12 @@
 #include "player.h"
 #include "map_view.h"
 
+#define SPHERE 0
+#define BUNNY  1
+#define PLANE  2
+#define SAFE_ZONE 3
+#define BIGFOOT 4
+
 int main(int argc, char* argv[]){
     GLFWwindow* window;
     // Razão de proporção da janela (largura/altura). Veja função FramebufferSizeCallback().
@@ -86,7 +92,8 @@ int main(int argc, char* argv[]){
 
     bool movement_key_pressed = false; // MOVED OUTSIDE LOOP
     bool running_key_pressed = false; // MOVED OUTSIDE LOOP
-    bool bigfoot_attacking = false;
+    bool shoot_button_pressed = false; // MOVED OUTSIDE LOOP
+    bool bigfoot_attacking = false; // MOVED OUTSIDE LOOP
 
     float prev_time = (float)glfwGetTime();
     while(!glfwWindowShouldClose(window)){
@@ -94,6 +101,9 @@ int main(int argc, char* argv[]){
         float delta_t = current_time - prev_time;
         prev_time = current_time;
 
+        //===================================================
+        // Update section:
+        //===================================================
         ShotgunRecoilCounter(delta_t); // EXTRACTED FUNCTION
         UpdateDeathAnimations(delta_t); // EXTRACTED FUNCTION
         SpectatorMechanic(delta_t); // EXTRACTED FUNCTION
@@ -106,16 +116,9 @@ int main(int argc, char* argv[]){
         UpdatePlayerWalkIntensity(delta_t, player_position); // EXTRACTED FUNCTION
         BigfootUpdate(player_position, delta_t); // EXTRACTED FUNCTION
         bigfoot_attacking = IsAnyBigfootAttacking(); // EXTRACTED FUNCTION
-
-        // Verificação de derrota ; Player died to bigfoot
         CheckLoseConditions(bigfoot_attacking); // EXTRACTED FUNCTION
-        // Verificação de vitória ; Kill all bigfoot or escape Valley
         CheckWinConditions(player_position); // EXTRACTED FUNCTION
-
-        // Mecânica de tiro:
-        bool shoot_button_pressed =
-            glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS ||
-            (g_SpectatorMode && ShouldSpectatorShoot() && g_ShotgunRecoilTimer <= 0.0f);
+        shoot_button_pressed = IsShootButtonPressed(window); // EXTRACTED FUNCTION
         ShootingMechanic(shoot_button_pressed, player_position); // EXTRACTED FUNCTION
         g_ShootButtonWasPressed = shoot_button_pressed;
 
@@ -254,11 +257,7 @@ int main(int argc, char* argv[]){
             glUniform2f(g_resolution_uniform, (float)fb_w, (float)fb_h);
         }
 
-        #define SPHERE 0
-        #define BUNNY  1
-        #define PLANE  2
-        #define SAFE_ZONE 3
-        #define BIGFOOT 4
+        
 
         // Atualiza os uniforms de iluminação por postes de luz a cada frame,
         // selecionando as luzes/oclusores mais próximos do player.
