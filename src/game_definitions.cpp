@@ -4999,7 +4999,10 @@ void ClearColorBackground(){
     else
 #endif
         glClearColor(0.015f, 0.018f, 0.026f, 1.0f);
-
+    //const float r = 255 / 255.0f;
+    //const float g = 165 / 255.0f;
+    //const float b = 79 / 255.0f;
+    //const float a = 255 / 255.0f;
     
     // "Pintamos" todos os pixels do framebuffer com a cor definida acima,
     // e também resetamos todos os pixels do Z-buffer (depth buffer).
