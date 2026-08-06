@@ -123,23 +123,7 @@ int main(int argc, char* argv[]){
         glm::vec4 player_position = g_Camera.GetPosition();
         UpdatePlayerWalkIntensity(delta_t, player_position); // EXTRACTED FUNCTION
 
-        if (g_GameState.status == GameStatus::Playing
-#if MAP_VIEW_ENABLED
-            && !g_MapView.IsActive()
-#endif
-#if BIGFOOT_FREEZE_DEBUG_ENABLED
-            && !g_BigfootFrozen
-#endif
-           )
-        {
-            for (BigfootInstance& instance : g_Bigfoots)
-            {
-                instance.enemy.Update(
-                    glm::vec3(player_position.x, player_position.y, player_position.z),
-                    delta_t
-                );
-            }
-        }
+        BigfootUpdate(player_position, delta_t);
 
         bool bigfoot_attacking = false;
 

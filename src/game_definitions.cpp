@@ -157,6 +157,7 @@ void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position);
 void ShowCoordinates(GLFWwindow* window);
 void CheckWinConditions(glm::vec4 player_position);
 void CheckLoseConditions(bool bigfoot_attacking);
+void BigfootUpdate(glm::vec4 player_position, float delta_t);
 void RenderPlayerView(glm::vec4 camera_view_vector, glm::vec4 camera_position_c, glm::vec4 camera_up_vector, float current_time);
 //================= Drawing
 void DrawAdrenalineBoostFilter(GLFWwindow* window);
@@ -4921,6 +4922,26 @@ void DrawBigfoots(bool has_map_bigfoot, float current_time, float delta_t, glm::
             has_map_bigfoot = true;
         }
     }
+}
+
+void BigfootUpdate(glm::vec4 player_position, float delta_t){
+    if(g_GameState.status == GameStatus::Playing
+#if MAP_VIEW_ENABLED
+            && !g_MapView.IsActive()
+#endif
+#if BIGFOOT_FREEZE_DEBUG_ENABLED
+            && !g_BigfootFrozen
+#endif
+           )
+        {
+            for (BigfootInstance& instance : g_Bigfoots)
+            {
+                instance.enemy.Update(
+                    glm::vec3(player_position.x, player_position.y, player_position.z),
+                    delta_t
+                );
+            }
+        }
 }
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
