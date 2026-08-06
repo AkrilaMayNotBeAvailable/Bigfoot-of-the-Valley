@@ -94,15 +94,7 @@ int main(int argc, char* argv[]){
         prev_time = current_time;
 
         ShotgunRecoilCounter(delta_t); // EXTRACTED FUNCTION
-
-        for(BigfootInstance& instance : g_Bigfoots){
-            if(instance.enemy.IsDead() && instance.death_animation_started)
-                instance.death_timer += delta_t;
-        }
-
-        if(g_PlayerFallAnimationStarted)
-            g_PlayerFallTimer += delta_t;
-
+        UpdateDeathAnimations(delta_t); // EXTRACTED FUNCTION
         SpectatorMechanic(delta_t); // EXTRACTED FUNCTION
         UpdateSpectatorController(delta_t); // EXTRACTED FUNCTION
         UpdateBigfootCamRequest(window, delta_t); // EXTRACTED FUNCTION
@@ -147,7 +139,7 @@ int main(int argc, char* argv[]){
         g_ShootButtonWasPressed = shoot_button_pressed;
 
         // Aqui executamos as operações de renderização
-
+        // Drawing:
         // Definimos a cor do "fundo" do framebuffer como branco.  Tal cor é
         // definida como coeficientes RGBA: Red, Green, Blue, Alpha; isto é:
         // Vermelho, Verde, Azul, Alpha (valor de transparência).
