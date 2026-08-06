@@ -2,6 +2,10 @@
 
 ## Computação Gráfica e Visualização I (INF01047) - INF/UFRGS
 
+## Fork Information:
+- July 25, Fork first update.
+- Aug 06, Milestone - Extracted most Update / Rendering function from main file.
+
 ## Integrantes
 
 - Vinícius Gross Castro
