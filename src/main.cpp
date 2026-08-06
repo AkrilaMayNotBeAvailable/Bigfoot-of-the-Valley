@@ -179,12 +179,8 @@ int main(int argc, char* argv[]){
                 g_SpectatorAutoRetryTimer = 2.0f;
         }
 
-        if (g_GameState.status == GameStatus::Playing &&
-            AllCollectiblesCollected() &&
-            IsPlayerInsideSafeZone(player_position))
-        {
-            SetGameWon();
-        }
+        // Verificação de vitória ; Kill all bigfoot or escape Valley
+        CheckWinConditions(player_position); // EXTRACTED FUNCTION
 
         // Mecânica de tiro:
         bool shoot_button_pressed =
@@ -484,9 +480,9 @@ int main(int argc, char* argv[]){
         // por segundo (frames per second).
         TextRendering_ShowFramesPerSecond(window);
 
-        ShowCoordinates(window);
-        DrawMainMenu(window);
-        TextDrawingChunk(window);
+        ShowCoordinates(window); // EXTRACTED FUNCTION
+        DrawMainMenu(window); // EXTRACTED FUNCTION
+        TextDrawingChunk(window); // EXTRACTED FUNCTION
 
         glfwSwapBuffers(window);
         glfwPollEvents();

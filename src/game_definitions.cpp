@@ -153,8 +153,9 @@ void LoadGameTextures();
 void ShotgunRecoilCounter(float delta_t);
 void TextDrawingChunk(GLFWwindow* window);
 void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t);
-void ShootingMechanic(bool shoot_button_pressed, glm::vec3 player_position);
+void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position);
 void ShowCoordinates(GLFWwindow* window);
+void CheckWinConditions(glm::vec4 player_position);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4687,7 +4688,7 @@ void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t){
     }
 }
 
-void ShootingMechanic(bool shoot_button_pressed, glm::vec3 player_position){
+void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position){
     if (g_GameState.status == GameStatus::Playing &&
         !IsBigfootCamActive() &&
         shoot_button_pressed &&
@@ -4750,6 +4751,15 @@ void ShowCoordinates(GLFWwindow* window){
             1.0f - (coords_chars + 1) * cw, 1.0f - 2.0f * lh, 1.0f);
     }
 #endif
+}
+
+void CheckWinConditions(glm::vec4 player_position){
+    if (g_GameState.status == GameStatus::Playing &&
+        AllCollectiblesCollected() &&
+        IsPlayerInsideSafeZone(player_position))
+    {
+        SetGameWon();
+    }
 }
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
