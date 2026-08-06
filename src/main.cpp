@@ -86,6 +86,7 @@ int main(int argc, char* argv[]){
 
     bool movement_key_pressed = false; // MOVED OUTSIDE LOOP
     bool running_key_pressed = false; // MOVED OUTSIDE LOOP
+    bool bigfoot_attacking = false;
 
     float prev_time = (float)glfwGetTime();
     while(!glfwWindowShouldClose(window)){
@@ -99,32 +100,12 @@ int main(int argc, char* argv[]){
         UpdateSpectatorController(delta_t); // EXTRACTED FUNCTION
         UpdateBigfootCamRequest(window, delta_t); // EXTRACTED FUNCTION
         MovementAndRunningInputCheck(window, movement_key_pressed, running_key_pressed); // EXTRACTED FUNTION
-
-        if(g_GameState.status == GameStatus::Playing && movement_key_pressed){
-            g_CameraBobTimer += delta_t * (running_key_pressed ? 11.5f : 7.2f);
-
-            float target_bob = running_key_pressed ? 1.0f : 0.45f;
-            g_CameraBobAmount += (target_bob - g_CameraBobAmount) * 8.0f * delta_t;
-        }
-        else{
-            g_CameraBobAmount += (0.0f - g_CameraBobAmount) * 8.0f * delta_t;
-        }
-
+        UpdateCameraBob(delta_t, movement_key_pressed, running_key_pressed); // EXTRACTED FUNCTION
         InGameUpdateMovementAndCollectibles(window, delta_t); // EXTRACTED FUNCTION
-
         glm::vec4 player_position = g_Camera.GetPosition();
         UpdatePlayerWalkIntensity(delta_t, player_position); // EXTRACTED FUNCTION
-
-        BigfootUpdate(player_position, delta_t);
-
-        bool bigfoot_attacking = false;
-
-        for(const BigfootInstance& instance : g_Bigfoots){
-            if (instance.enemy.GetState() == BigfootState::Attacking){
-                bigfoot_attacking = true;
-                break;
-            }
-        }
+        BigfootUpdate(player_position, delta_t); // EXTRACTED FUNCTION
+        bigfoot_attacking = IsAnyBigfootAttacking(); // EXTRACTED FUNCTION
 
         // Verificação de derrota ; Player died to bigfoot
         CheckLoseConditions(bigfoot_attacking); // EXTRACTED FUNCTION

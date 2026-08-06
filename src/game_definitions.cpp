@@ -159,6 +159,8 @@ void CheckWinConditions(glm::vec4 player_position);
 void CheckLoseConditions(bool bigfoot_attacking);
 void BigfootUpdate(glm::vec4 player_position, float delta_t);
 void UpdateDeathAnimations(float delta_t);
+bool IsAnyBigfootAttacking();
+void UpdateCameraBob(float delta_t, bool movement_key_pressed, bool running_key_pressed);
 void RenderPlayerView(glm::vec4 camera_view_vector, glm::vec4 camera_position_c, glm::vec4 camera_up_vector, float current_time);
 //================= Drawing
 void DrawAdrenalineBoostFilter(GLFWwindow* window);
@@ -4953,6 +4955,29 @@ void UpdateDeathAnimations(float delta_t){
 
     if(g_PlayerFallAnimationStarted)
         g_PlayerFallTimer += delta_t;
+}
+
+bool IsAnyBigfootAttacking(){
+    for(const BigfootInstance& instance : g_Bigfoots){
+        if (instance.enemy.GetState() == BigfootState::Attacking){
+            break;
+        } else {
+            return false;
+        }
+    }
+    return true;
+}
+
+void UpdateCameraBob(float delta_t, bool movement_key_pressed, bool running_key_pressed){
+    if(g_GameState.status == GameStatus::Playing && movement_key_pressed){
+        g_CameraBobTimer += delta_t * (running_key_pressed ? 11.5f : 7.2f);
+
+        float target_bob = running_key_pressed ? 1.0f : 0.45f;
+        g_CameraBobAmount += (target_bob - g_CameraBobAmount) * 8.0f * delta_t;
+    }
+    else{
+        g_CameraBobAmount += (0.0f - g_CameraBobAmount) * 8.0f * delta_t;
+    }
 }
 
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
