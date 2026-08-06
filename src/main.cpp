@@ -87,12 +87,7 @@ int main(int argc, char* argv[]){
     g_MouseCaptured = true;
     g_FirstCapturedMouseFrame = true;
 
-    // Habilitamos o Z-buffer. Veja slides 104-116 do documento Aula_09_Projecoes.pdf.
-    glEnable(GL_DEPTH_TEST);
-    // Habilitamos o Backface Culling. Veja slides 8-13 do documento Aula_02_Fundamentos_Matematicos.pdf, slides 23-34 do documento Aula_13_Clipping_and_Culling.pdf e slides 112-123 do documento Aula_14_Laboratorio_3_Revisao.pdf.
-    glEnable(GL_CULL_FACE);
-    glCullFace(GL_BACK);
-    glFrontFace(GL_CCW);
+    GLFWSetup(); // EXTRACTED FUNCTION
 
     float prev_time = (float)glfwGetTime();
     while(!glfwWindowShouldClose(window)){
@@ -168,7 +163,7 @@ int main(int argc, char* argv[]){
                 break;
             }
         }
-        
+
         // Verificação de derrota ; Player died to bigfoot
         CheckLoseConditions(bigfoot_attacking); // EXTRACTED FUNCTION
         // Verificação de vitória ; Kill all bigfoot or escape Valley
@@ -227,49 +222,47 @@ int main(int argc, char* argv[]){
                 ? NearestLiveBigfootIndex(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z))
                 : -1;
 
-            if (IsBigfootCamActive() && bigfoot_cam_index >= 0)
-            {
+            if (IsBigfootCamActive() && bigfoot_cam_index >= 0){
                 // Câmera posicionada na cabeça do Pé Grande vivo mais próximo,
                 // olhando na direção em que ele anda. O jogador apenas observa
                 // (não controla o Pé Grande), então não aplicamos bob nem queda.
                 const BigfootInstance& bf = g_Bigfoots[(size_t)bigfoot_cam_index];
                 view = ComputeBigfootCamView(bf.enemy.GetPosition(), bf.render_yaw);
             }
-            else
-            {
-            view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
+            else{
+                view = Matrix_Camera_View(camera_position_c, camera_view_vector, camera_up_vector);
 
-            if (!g_PlayerFallAnimationStarted && g_CameraBobAmount > 0.001f)
-            {
-                float vertical_bob = sin(g_CameraBobTimer) * 0.045f * g_CameraBobAmount;
-                float roll_bob = sin(g_CameraBobTimer * 0.5f) * 0.018f * g_CameraBobAmount;
+                if (!g_PlayerFallAnimationStarted && g_CameraBobAmount > 0.001f)
+                {
+                    float vertical_bob = sin(g_CameraBobTimer) * 0.045f * g_CameraBobAmount;
+                    float roll_bob = sin(g_CameraBobTimer * 0.5f) * 0.018f * g_CameraBobAmount;
 
-                view = Matrix_Rotate_Z(roll_bob)
-                    * Matrix_Translate(0.0f, vertical_bob, 0.0f)
-                    * view;
-            }
+                    view = Matrix_Rotate_Z(roll_bob)
+                        * Matrix_Translate(0.0f, vertical_bob, 0.0f)
+                        * view;
+                }
 
-            if(g_PlayerFallAnimationStarted){
-                float fall = g_PlayerFallTimer / 1.10f;
+                if(g_PlayerFallAnimationStarted){
+                    float fall = g_PlayerFallTimer / 1.10f;
 
-                if (fall > 1.0f)
-                    fall = 1.0f;
+                    if (fall > 1.0f)
+                        fall = 1.0f;
 
-                fall = fall * fall * (3.0f - 2.0f * fall);
+                    fall = fall * fall * (3.0f - 2.0f * fall);
 
-                // O olho desce até perto do chão (de ~1.7 para ~0.30), como se o
-                // jogador caísse, e só então aplicamos o tombamento para o lado.
-                const float ground_eye_y = 0.55f;
-                glm::vec4 fallen_position = camera_position_c;
-                fallen_position.y = camera_position_c.y
-                    + (ground_eye_y - camera_position_c.y) * fall;
+                    // O olho desce até perto do chão (de ~1.7 para ~0.30), como se o
+                    // jogador caísse, e só então aplicamos o tombamento para o lado.
+                    const float ground_eye_y = 0.55f;
+                    glm::vec4 fallen_position = camera_position_c;
+                    fallen_position.y = camera_position_c.y
+                        + (ground_eye_y - camera_position_c.y) * fall;
 
-                view = Matrix_Camera_View(fallen_position, camera_view_vector, camera_up_vector);
+                    view = Matrix_Camera_View(fallen_position, camera_view_vector, camera_up_vector);
 
-                view = Matrix_Rotate_Z(1.35f * fall)
-                    * Matrix_Rotate_X(-0.65f * fall)
-                    * view;
-            }
+                    view = Matrix_Rotate_Z(1.35f * fall)
+                        * Matrix_Rotate_X(-0.65f * fall)
+                        * view;
+                }
             }
 
             // Agora computamos a matriz de Projeção.

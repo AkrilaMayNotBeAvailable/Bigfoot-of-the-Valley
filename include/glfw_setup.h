@@ -8,4 +8,5 @@ const int WINDOW_HEIGHT = 720;
 
 void InitialOpenGLFrameWorkConfiguration(GLFWwindow*& window);
 void ErrorCallback(int error, const char* description);
+void GLFWSetup();
 void FramebufferSizeCallback(GLFWwindow* window, int width, int height);
