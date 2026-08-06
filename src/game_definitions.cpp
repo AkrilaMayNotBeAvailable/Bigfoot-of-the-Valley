@@ -156,6 +156,7 @@ void InGameUpdateMovementAndCollectibles(GLFWwindow* window, float delta_t);
 void ShootingMechanic(bool shoot_button_pressed, glm::vec4 player_position);
 void ShowCoordinates(GLFWwindow* window);
 void CheckWinConditions(glm::vec4 player_position);
+void CheckLoseConditions(bool bigfoot_attacking);
 //===================================================================
 
 void BuildTrianglesAndAddToVirtualScene(ObjModel*); // Constrói representação de um ObjModel como malha de triângulos para renderização
@@ -4759,6 +4760,18 @@ void CheckWinConditions(glm::vec4 player_position){
         IsPlayerInsideSafeZone(player_position))
     {
         SetGameWon();
+    }
+}
+
+void CheckLoseConditions(bool bigfoot_attacking){
+    if(g_GameState.status == GameStatus::Playing && bigfoot_attacking){
+        PlayGameSound(GameSound::BigfootKillsPlayer);
+        g_PlayerFallAnimationStarted = true;
+        g_PlayerFallTimer = 0.0f;
+        g_GameState.status = GameStatus::Lost;
+
+        if (g_SpectatorMode)
+            g_SpectatorAutoRetryTimer = 2.0f;
     }
 }
 

@@ -168,17 +168,8 @@ int main(int argc, char* argv[]){
                 break;
             }
         }
-
-        if(g_GameState.status == GameStatus::Playing && bigfoot_attacking){
-            PlayGameSound(GameSound::BigfootKillsPlayer);
-            g_PlayerFallAnimationStarted = true;
-            g_PlayerFallTimer = 0.0f;
-            g_GameState.status = GameStatus::Lost;
-
-            if (g_SpectatorMode)
-                g_SpectatorAutoRetryTimer = 2.0f;
-        }
-
+        // Verificação de derrota ; Player died to bigfoot
+        CheckLoseConditions(bigfoot_attacking); // EXTRACTED FUNCTION
         // Verificação de vitória ; Kill all bigfoot or escape Valley
         CheckWinConditions(player_position); // EXTRACTED FUNCTION
 
