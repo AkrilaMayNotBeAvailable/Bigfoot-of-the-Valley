@@ -144,7 +144,6 @@ int main(int argc, char* argv[]){
         // Atualiza os uniforms de iluminação por postes de luz a cada frame,
         // selecionando as luzes/oclusores mais próximos do player.
         UpdateLightingUniforms(glm::vec3(camera_position_c.x, camera_position_c.y, camera_position_c.z));
-
         DrawCampusMap();
 
         // Desenhamos os blocos retangulares do cenário.
@@ -155,31 +154,23 @@ int main(int argc, char* argv[]){
         float map_bigfoot_yaw = 0.0f;
         bool has_map_bigfoot = false;
         DrawBigfoots(has_map_bigfoot, current_time, delta_t, map_bigfoot_position, map_bigfoot_yaw); // EXTRACTED FUNTION
-
-        // Esfera de debug da hitbox do Pé Grande.
         DrawHitBoxDebug(model, SAFE_ZONE); // EXTRACTED FUNTION
-
         // Desenhamos os itens coletáveis.
         // Por enquanto usamos esferas pequenas como placeholder visual.
         std::vector<Collectible>& collectibles = GetSceneCollectibles();
         DrawCollectibles(collectibles, current_time, model); // EXTRACTED FUNTION
-        
         // Desenhamos a zona segura/final somente depois que todos os itens forem coletados.
         DrawSafeZone(current_time); // EXTRACTED FUNTION
-
-#if MAP_VIEW_ENABLED
-        if (g_MapView.IsActive())
-        {
-            DrawMapViewOverlay(window, camera_position_c, camera_view_vector, map_bigfoot_position, map_bigfoot_yaw);
-        }
-#endif
-
+        DrawMapOverlay(window, camera_position_c, camera_view_vector, map_bigfoot_position, map_bigfoot_yaw); // EXTRACTED FUNTION
         RenderPlayerView(camera_view_vector, camera_position_c, camera_up_vector, current_time); // EXTRACTED FUNTION
         DrawAdrenalineBoostFilter(window); // EXTRACTED FUNTION
         TextRendering_ShowFramesPerSecond(window); // EXTRACTED FUNTION
         ShowCoordinates(window); // EXTRACTED FUNCTION
         DrawMainMenu(window); // EXTRACTED FUNCTION
         TextDrawingChunk(window); // EXTRACTED FUNCTION
+        //===================================================
+        // End: RENDERING section:
+        //===================================================
 
         glfwSwapBuffers(window);
         glfwPollEvents();

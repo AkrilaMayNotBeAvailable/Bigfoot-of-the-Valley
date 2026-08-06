@@ -170,6 +170,7 @@ void DrawAdrenalineBoostFilter(GLFWwindow* window);
 void DrawHitBoxDebug(glm::mat4 model, int SAFE_ZONE);
 void DrawCollectibles(std::vector<Collectible> collectibles, float current_time, glm::mat4 model);
 void DrawSafeZone(float current_time);
+void DrawMapOverlay(GLFWwindow* window, glm::vec4 camera_position_c, glm::vec4 camera_view_vector, glm::vec3 map_bigfoot_position, float map_bigfoot_yaw);
 void DrawBigfoots(bool has_map_bigfoot, float current_time, float delta_t, glm::vec3 map_bigfoot_position, float map_bigfoot_yaw);
 //================= Input Handling
 void MovementAndRunningInputCheck(GLFWwindow* window, bool& movement_key_pressed, bool& running_key_pressed);
@@ -5127,6 +5128,21 @@ void UpdateShaderUniforms(
         glfwGetFramebufferSize(window, &fb_w, &fb_h);
         glUniform2f(g_resolution_uniform, (float)fb_w, (float)fb_h);
     }
+}
+
+void DrawMapOverlay(
+    GLFWwindow* window,
+    glm::vec4 camera_position_c,
+    glm::vec4 camera_view_vector,
+    glm::vec3 map_bigfoot_position,
+    float map_bigfoot_yaw
+){
+#if MAP_VIEW_ENABLED
+    if (g_MapView.IsActive())
+    {
+        DrawMapViewOverlay(window, camera_position_c, camera_view_vector, map_bigfoot_position, map_bigfoot_yaw);
+    }
+#endif
 }
 // set makeprg=cd\ ..\ &&\ make\ run\ >/dev/null
 // vim: set spell spelllang=pt_br :
